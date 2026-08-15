@@ -54,6 +54,8 @@ public static class ContractMapping
                 medication.Provenance.RetrievedAt,
                 medication.Provenance.DatasetVersion),
         activeScheduleCount,
+        medication.RemainingQuantity,
+        medication.RemainingUpdatedAt,
         medication.CreatedAt,
         medication.UpdatedAt);
 

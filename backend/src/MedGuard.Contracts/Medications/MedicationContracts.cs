@@ -21,7 +21,8 @@ public sealed record UpdateMedicationRequest(
     string? Strength,
     string? Route,
     string? LabelDirections,
-    string? Notes);
+    string? Notes,
+    bool AttemptVerification = true);
 
 public sealed record ProvenanceResponse(
     string Provider,
@@ -37,6 +38,18 @@ public sealed record IngredientResponse(
     string? Unit,
     string? RxCui,
     string DisplayStrength);
+
+/// <summary>
+/// Plain-language, general educational context about a medication. <see cref="IsAvailable"/>
+/// is false when only the generic "ask your pharmacist" fallback could be provided. Never
+/// contains dosing or personal medical advice.
+/// </summary>
+public sealed record MedicationEducationResponse(
+    string Message,
+    bool GeneratedByAi,
+    bool IsAvailable,
+    IReadOnlyList<string> UsedFor,
+    string? DrugClass);
 
 public sealed record MedicationResponse(
     Guid Id,
@@ -55,5 +68,10 @@ public sealed record MedicationResponse(
     IReadOnlyCollection<IngredientResponse> Ingredients,
     ProvenanceResponse? Provenance,
     int ActiveScheduleCount,
+    int? RemainingQuantity,
+    DateTimeOffset? RemainingUpdatedAt,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
+
+/// <summary>Self-reported count of remaining doses used for refill reminders. Null clears it.</summary>
+public sealed record SetRefillRequest(int? RemainingQuantity);

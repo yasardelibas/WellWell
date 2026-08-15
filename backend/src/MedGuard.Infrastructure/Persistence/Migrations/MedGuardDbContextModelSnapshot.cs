@@ -371,6 +371,12 @@ namespace MedGuard.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("ProvenanceRetrievedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("RemainingQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("RemainingUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("Route")
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");

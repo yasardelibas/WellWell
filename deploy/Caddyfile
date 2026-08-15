@@ -1,0 +1,11 @@
+# sslip.io maps <ip-with-dashes>.sslip.io to the IP, so Caddy can obtain a real Let's Encrypt
+# certificate for a bare-IP droplet. This gives the mobile app a valid HTTPS endpoint (required
+# by iOS App Transport Security) without owning a domain.
+{
+	email admin@medguard.app
+}
+
+164-90-169-182.sslip.io {
+	encode gzip
+	reverse_proxy api:8080
+}

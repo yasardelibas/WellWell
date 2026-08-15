@@ -89,6 +89,26 @@ public sealed class EmergencyCardFlowTests : IClassFixture<MedGuardApiFactory>
     }
 
     [Fact]
+    public async Task PublicCard_ShouldRenderHtml_ForBrowsers()
+    {
+        var user = await _factory.RegisterAsync();
+        await AddMedicationAsync(user);
+        var card = await EnableCardAsync(user, shareMedications: true, shareContact: true, shareNotes: true);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/e/{TokenOf(card)}");
+        request.Headers.Add("Accept", "text/html");
+        var response = await _factory.CreateApiClient().SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("text/html", response.Content.Headers.ContentType?.MediaType);
+
+        var html = await response.Content.ReadAsStringAsync();
+        Assert.Contains("EMERGENCY CARD", html);
+        Assert.Contains("Burak", html);
+        Assert.Contains("Penicillin", html);
+    }
+
+    [Fact]
     public async Task Card_ShouldRequireAuthentication()
     {
         var response = await _factory.CreateApiClient().GetAsync("/api/emergency-card");
@@ -96,8 +116,13 @@ public sealed class EmergencyCardFlowTests : IClassFixture<MedGuardApiFactory>
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    private Task<HttpResponseMessage> PublicGetAsync(string token) =>
-        _factory.CreateApiClient().GetAsync($"/e/{token}");
+    // Programmatic consumers must opt into JSON; browsers (the QR-scan path) get HTML by default.
+    private Task<HttpResponseMessage> PublicGetAsync(string token)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, $"/e/{token}");
+        request.Headers.Add("Accept", "application/json");
+        return _factory.CreateApiClient().SendAsync(request);
+    }
 
     private static string TokenOf(EmergencyCardResponse card) =>
         card.ShareUrl[(card.ShareUrl.LastIndexOf('/') + 1)..];

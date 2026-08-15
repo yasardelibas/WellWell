@@ -28,6 +28,9 @@ public sealed class DrugDataOptions
 
     public string OpenFdaBaseUrl { get; set; } = "https://api.fda.gov/";
 
+    /// <summary>RxClass (RxNav) endpoint used to enrich medication education with authoritative uses/class.</summary>
+    public string RxClassBaseUrl { get; set; } = "https://rxnav.nlm.nih.gov/REST/rxclass/";
+
     public string? OpenFdaApiKey { get; set; }
 
     public int TimeoutSeconds { get; set; } = 8;

@@ -33,11 +33,9 @@ backend/          .NET 8 minimal API, vertical slices over clean architecture
   src/MedGuard.Infrastructure  EF Core, PostgreSQL, drug data providers, auth, audit
   src/MedGuard.Api             endpoints, validation, rate limiting, telemetry, seeding
   tests/                       unit and integration tests
-mobile/           Expo + React Native client
-  src/app                      Expo Router routes
-  src/features                 feature hooks and state
-  src/components               UI kit and shared components
-  src/services                 API client, notifications, secure storage
+mobile_flutter/   Flutter iOS/Android client — same design, APIs and copy
+  lib/                        screens, API client, theme
+  assets/illustrations        onboarding and empty-state art
 docker-compose.yml             PostgreSQL and Redis for local development
 ```
 
@@ -65,21 +63,21 @@ dotnet run --project src/MedGuard.Api --launch-profile http
 The API listens on `http://localhost:5175`, applies migrations on start, and seeds the demo
 account. Swagger is available at `/swagger` in development.
 
-### 3. Mobile
+### 3. Mobile (Flutter)
+
+USB ile fiziksel iPhone/Android’de çalışır; Expo Go veya tünel gerekmez.
 
 ```bash
-cd mobile
-npm install
-npx expo start
+cd mobile_flutter
+flutter pub get
+flutter run
 ```
 
-The client reads `extra.apiBaseUrl` from `app.json` (`http://localhost:5175`) and rewrites
-`localhost` to `10.0.2.2` on Android emulators. Override it with `EXPO_PUBLIC_API_BASE_URL`
-when running on a physical device.
+API adresi varsayılan olarak `https://164-90-169-182.sslip.io`. Yerel backend için:
 
-Building the native project (`npx expo run:ios`) requires the Xcode version that matches the
-Expo SDK; SDK 57 needs Xcode 26 or newer because its prebuilt frameworks are built with Swift
-tools 6.2.
+```bash
+flutter run --dart-define=API_BASE_URL=http://192.168.1.39:5175
+```
 
 ## Demo account
 
@@ -175,9 +173,3 @@ different spellings that normalise to the same ingredient, distinct ingredients,
 medications, empty ingredient lists and provider failure. Integration tests cover scan to
 confirmation, safety analysis, schedule to dose event, the caregiver permission lifecycle and
 QR token to emergency card.
-
-```bash
-cd mobile
-npx tsc --noEmit
-npx expo lint
-```

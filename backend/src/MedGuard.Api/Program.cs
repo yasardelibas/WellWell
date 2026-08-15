@@ -77,7 +77,9 @@ app.UseSerilogRequestLogging(options =>
             : LogEventLevel.Information;
 });
 
-if (isProduction)
+// HTTPS is normally enforced in production, but a reverse proxy (e.g. Caddy) that terminates TLS
+// can turn this off via Security:EnforceHttps=false to avoid redirecting already-secure traffic.
+if (isProduction && app.Configuration.GetValue("Security:EnforceHttps", true))
 {
     app.UseHsts();
     app.UseHttpsRedirection();

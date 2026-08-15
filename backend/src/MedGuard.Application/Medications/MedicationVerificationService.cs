@@ -45,8 +45,18 @@ public sealed class MedicationVerificationService
 
     public async Task<MedicationVerificationOutcome> VerifyAsync(
         DrugSearchRequest request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? preferredExternalId = null)
     {
+        if (!string.IsNullOrWhiteSpace(preferredExternalId))
+        {
+            var byId = await TryVerifyByExternalIdAsync(preferredExternalId, cancellationToken).ConfigureAwait(false);
+            if (byId is not null)
+            {
+                return byId;
+            }
+        }
+
         if (_providers.Count == 0)
         {
             return new MedicationVerificationOutcome(
@@ -120,6 +130,35 @@ public sealed class MedicationVerificationService
             anyResponded
                 ? "We couldn't confidently match this medication with our current data source."
                 : "We couldn't verify this medication right now.");
+    }
+
+    private async Task<MedicationVerificationOutcome?> TryVerifyByExternalIdAsync(
+        string externalId,
+        CancellationToken cancellationToken)
+    {
+        foreach (var provider in _providers)
+        {
+            try
+            {
+                var details = await provider.GetDrugAsync(externalId, cancellationToken).ConfigureAwait(false);
+                if (details is null)
+                {
+                    continue;
+                }
+
+                return new MedicationVerificationOutcome(
+                    MedicationVerificationStatus.Verified,
+                    details.Identity,
+                    new[] { new DrugCandidate(details.Identity, 1d) },
+                    $"Verified against {details.Identity.Provenance.Provider}.");
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogWarning(exception, "Drug data provider {Provider} failed a lookup by identifier.", provider.Name);
+            }
+        }
+
+        return null;
     }
 
     private async Task<DrugSearchResult> SearchWithTelemetryAsync(

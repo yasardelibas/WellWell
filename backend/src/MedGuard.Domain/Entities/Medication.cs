@@ -38,6 +38,12 @@ public sealed class Medication
 
     public string? Notes { get; private set; }
 
+    /// <summary>How many doses (pills, sprays, etc.) the user says they have left. Optional.</summary>
+    public int? RemainingQuantity { get; private set; }
+
+    /// <summary>When the user last updated <see cref="RemainingQuantity"/>, used to age the count.</summary>
+    public DateTimeOffset? RemainingUpdatedAt { get; private set; }
+
     public MedicationVerificationStatus VerificationStatus { get; private set; }
         = MedicationVerificationStatus.Unverified;
 
@@ -187,6 +193,18 @@ public sealed class Medication
     public void Archive(DateTimeOffset now)
     {
         IsArchived = true;
+        UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Records the user's own count of remaining doses. Passing null clears it. Negative
+    /// values are clamped to zero. This is a self-reported convenience for refill reminders,
+    /// never a clinical instruction.
+    /// </summary>
+    public void SetRemainingQuantity(int? remainingQuantity, DateTimeOffset now)
+    {
+        RemainingQuantity = remainingQuantity is < 0 ? 0 : remainingQuantity;
+        RemainingUpdatedAt = remainingQuantity is null ? null : now;
         UpdatedAt = now;
     }
 

@@ -60,6 +60,14 @@ public sealed class DemoDataSeeder
 
         if (existing is not null)
         {
+            // Demo accounts created before email verification existed may still be flagged
+            // unverified; backfill so the one-tap demo never lands on the verification screen.
+            if (!existing.EmailVerified)
+            {
+                existing.MarkEmailVerified(_clock.UtcNow);
+                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             return existing.Id;
         }
 

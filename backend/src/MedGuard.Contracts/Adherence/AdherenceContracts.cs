@@ -36,3 +36,43 @@ public sealed record AdherenceHistoryResponse(
     int SkippedCount,
     int MissedCount,
     int PendingCount);
+
+/// <summary>
+/// A short, encouraging weekly recap. The counts are deterministic; <see cref="Message"/> is
+/// a plain-language rephrasing (AI or template) that never adds medical advice.
+/// </summary>
+public sealed record AdherenceSummaryResponse(
+    DateOnly From,
+    DateOnly To,
+    int TakenCount,
+    int SkippedCount,
+    int MissedCount,
+    int PendingCount,
+    int AdherencePercent,
+    string Message,
+    bool GeneratedByAi);
+
+/// <summary>A one-sentence, non-judgemental nudge for today's plan.</summary>
+public sealed record DailyNudgeResponse(
+    int CompletedCount,
+    int TotalCount,
+    string Message,
+    bool GeneratedByAi);
+
+/// <summary>
+/// A richer wellness recap over the last 30 days: adherence, an on-time streak and the
+/// time-of-day window most often missed. Counts and streak are deterministic; the message
+/// is a plain-language rephrasing that never adds medical advice.
+/// </summary>
+public sealed record AdherenceInsightsResponse(
+    DateOnly From,
+    DateOnly To,
+    int TakenCount,
+    int SkippedCount,
+    int MissedCount,
+    int PendingCount,
+    int AdherencePercent,
+    int StreakDays,
+    string? WeakestTimeOfDay,
+    string Message,
+    bool GeneratedByAi);

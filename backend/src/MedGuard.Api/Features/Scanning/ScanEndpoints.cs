@@ -191,7 +191,13 @@ public static class ScanEndpoints
                 "Add a brand name or a generic name before confirming."));
         }
 
-        var built = await builder.BuildAsync(userId, draft, attemptVerification: true, sourceScanId: scan.Id, cancellationToken);
+        var built = await builder.BuildAsync(
+            userId,
+            draft,
+            attemptVerification: true,
+            sourceScanId: scan.Id,
+            cancellationToken: cancellationToken,
+            preferredExternalId: request.SelectedCandidateRxCui);
 
         // A medication that could not be verified is only saved once the user has
         // explicitly acknowledged that it will be stored as unverified.

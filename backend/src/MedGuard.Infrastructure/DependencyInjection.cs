@@ -1,6 +1,8 @@
 using System.Net.Http.Headers;
 using MedGuard.Application.Abstractions;
 using MedGuard.Application.Ai;
+using MedGuard.Application.Education;
+using MedGuard.Application.Insights;
 using MedGuard.Application.Medications;
 using MedGuard.Application.Safety;
 using MedGuard.Infrastructure.Ai;
@@ -119,6 +121,15 @@ public static class DependencyInjection
             client.DefaultRequestHeaders.UserAgent.ParseAdd("MedGuard/1.0");
         });
 
+        // RxClass powers deterministic drug classification (uses + therapeutic class) for the
+        // education card. It is an enrichment, not part of the identity lookup chain.
+        services.AddHttpClient<IDrugClassificationProvider, RxClassDrugClassificationProvider>(client =>
+        {
+            client.BaseAddress = new Uri(EnsureTrailingSlash(options.RxClassBaseUrl));
+            client.Timeout = timeout;
+            client.DefaultRequestHeaders.UserAgent.ParseAdd("MedGuard/1.0");
+        });
+
         // Registration order defines the lookup chain; the first confident match wins.
         foreach (var providerName in options.Providers.Select(name => name.Trim().ToLowerInvariant()).Distinct())
         {
@@ -186,20 +197,28 @@ public static class DependencyInjection
     private static void AddExplanations(IServiceCollection services)
     {
         services.AddSingleton<TemplateExplanationService>();
+        services.AddSingleton<TemplateAdherenceInsightService>();
+        services.AddSingleton<TemplateMedicationEducationService>();
 
-        services.AddHttpClient<OpenAiExplanationService>((provider, client) =>
-        {
-            var options = provider.GetRequiredService<IOptions<AiOptions>>().Value;
-            client.BaseAddress = new Uri(EnsureTrailingSlash(options.BaseUrl));
-            client.Timeout = TimeSpan.FromSeconds(Math.Clamp(options.TimeoutSeconds, 5, 60));
-
-            if (!string.IsNullOrWhiteSpace(options.ApiKey))
-            {
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
-            }
-        });
+        services.AddHttpClient<OpenAiExplanationService>(ConfigureAiClient);
+        services.AddHttpClient<OpenAiAdherenceInsightService>(ConfigureAiClient);
+        services.AddHttpClient<OpenAiMedicationEducationService>(ConfigureAiClient);
 
         services.AddTransient<IMedicationExplanationService>(provider => provider.GetRequiredService<OpenAiExplanationService>());
+        services.AddTransient<IAdherenceInsightService>(provider => provider.GetRequiredService<OpenAiAdherenceInsightService>());
+        services.AddTransient<IMedicationEducationService>(provider => provider.GetRequiredService<OpenAiMedicationEducationService>());
+    }
+
+    private static void ConfigureAiClient(IServiceProvider provider, HttpClient client)
+    {
+        var options = provider.GetRequiredService<IOptions<AiOptions>>().Value;
+        client.BaseAddress = new Uri(EnsureTrailingSlash(options.BaseUrl));
+        client.Timeout = TimeSpan.FromSeconds(Math.Clamp(options.TimeoutSeconds, 5, 60));
+
+        if (!string.IsNullOrWhiteSpace(options.ApiKey))
+        {
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
+        }
     }
 
     private static string EnsureTrailingSlash(string url) => url.EndsWith('/') ? url : url + "/";

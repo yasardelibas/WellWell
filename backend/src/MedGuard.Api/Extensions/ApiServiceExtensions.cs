@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Text;
 using System.Threading.RateLimiting;
 using MedGuard.Application.Telemetry;
+using MedGuard.Contracts.Common;
 using MedGuard.Infrastructure.Configuration;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -64,6 +66,28 @@ public static class ApiServiceExtensions
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+            // A bare 429 leaves the mobile client guessing. Emit a Retry-After header (when the
+            // limiter can tell us) and a consistent JSON body so clients can back off and show a
+            // clear message instead of a generic error.
+            options.OnRejected = async (context, cancellationToken) =>
+            {
+                var response = context.HttpContext.Response;
+
+                if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+                {
+                    response.Headers.RetryAfter =
+                        ((int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(NumberFormatInfo.InvariantInfo);
+                }
+
+                if (!response.HasStarted)
+                {
+                    response.StatusCode = StatusCodes.Status429TooManyRequests;
+                    await response.WriteAsJsonAsync(
+                        new ApiError("rate_limited", "Too many requests. Please wait a moment and try again."),
+                        cancellationToken);
+                }
+            };
 
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                 RateLimitPartition.GetFixedWindowLimiter(

@@ -45,7 +45,8 @@ public sealed class MedicationBuilder
         MedicationDraft draft,
         bool attemptVerification,
         Guid? sourceScanId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        string? preferredExternalId = null)
     {
         var ingredients = draft.Ingredients
             .Where(ingredient => !string.IsNullOrWhiteSpace(ingredient.Name))
@@ -60,7 +61,8 @@ public sealed class MedicationBuilder
                     ingredients.Select(ingredient => ingredient.OriginalName).ToList(),
                     draft.Strength,
                     draft.DosageForm),
-                cancellationToken)
+                cancellationToken,
+                preferredExternalId)
             : new MedicationVerificationOutcome(
                 MedicationVerificationStatus.Unverified,
                 null,
