@@ -2498,6 +2498,12 @@ abstract class AppLocalizations {
   /// **'We couldn\'t read the label clearly'**
   String get scanExtractionFailedTitle;
 
+  /// No description provided for @scanExtractionFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again in better light, or enter the details manually.'**
+  String get scanExtractionFailedMessage;
+
   /// No description provided for @scanEnterDetailsManually.
   ///
   /// In en, this message translates to:

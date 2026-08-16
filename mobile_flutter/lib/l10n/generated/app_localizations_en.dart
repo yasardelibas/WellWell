@@ -1388,6 +1388,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get scanExtractionFailedTitle => 'We couldn\'t read the label clearly';
 
   @override
+  String get scanExtractionFailedMessage =>
+      'Try again in better light, or enter the details manually.';
+
+  @override
   String get scanEnterDetailsManually => 'Enter the details manually';
 
   @override
