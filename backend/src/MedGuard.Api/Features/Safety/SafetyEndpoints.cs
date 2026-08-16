@@ -27,6 +27,7 @@ public static class SafetyEndpoints
         IMedicationSafetyEngine engine,
         IMedicationRepository medications,
         SafetyFindingStore store,
+        MedGuardDbContext dbContext,
         ICurrentUser currentUser,
         IAuditLogger auditLogger,
         CancellationToken cancellationToken)
@@ -51,8 +52,12 @@ public static class SafetyEndpoints
             ContractMapping.ToWireValue(persisted.Status),
             cancellationToken);
 
-        return Results.Ok(persisted.ToResponse());
+        var language = await GetLanguageAsync(dbContext, userId, cancellationToken);
+        return Results.Ok(persisted.ToResponse(language));
     }
+
+    private static Task<string?> GetLanguageAsync(MedGuardDbContext dbContext, Guid userId, CancellationToken cancellationToken) =>
+        dbContext.Users.Where(user => user.Id == userId).Select(user => user.PreferredLanguage).FirstOrDefaultAsync(cancellationToken);
 
     private static async Task<Domain.Safety.SafetyAnalysisResult?> AnalyzeCandidateAsync(
         IMedicationSafetyEngine engine,
@@ -67,11 +72,14 @@ public static class SafetyEndpoints
 
     private static async Task<IResult> GetFindingsAsync(
         SafetyFindingStore store,
+        MedGuardDbContext dbContext,
         ICurrentUser currentUser,
         CancellationToken cancellationToken)
     {
-        var findings = await store.GetOpenFindingsAsync(currentUser.RequireUserId(), cancellationToken);
-        return Results.Ok(findings.Select(finding => finding.ToResponse()).ToList());
+        var userId = currentUser.RequireUserId();
+        var findings = await store.GetOpenFindingsAsync(userId, cancellationToken);
+        var language = await GetLanguageAsync(dbContext, userId, cancellationToken);
+        return Results.Ok(findings.Select(finding => finding.ToResponse(language)).ToList());
     }
 
     private static async Task<IResult> ExplainAsync(
@@ -93,8 +101,10 @@ public static class SafetyEndpoints
             return Results.NotFound(new ApiError("finding_not_found", "This safety finding is no longer available."));
         }
 
+        var language = await GetLanguageAsync(dbContext, userId, cancellationToken);
+
         // The explanation layer only ever sees a finding the deterministic engine produced.
-        var explanation = await explanationService.ExplainAsync(finding, cancellationToken);
+        var explanation = await explanationService.ExplainAsync(finding, language, cancellationToken);
 
         await auditLogger.LogAsync(
             AuditEventType.SafetyExplanationRequested,
@@ -108,6 +118,6 @@ public static class SafetyEndpoints
             explanation.Text,
             explanation.GeneratedByAi,
             explanation.Source,
-            SafetyMessages.GeneralDisclaimer));
+            SafetyMessages.GeneralDisclaimer(language)));
     }
 }

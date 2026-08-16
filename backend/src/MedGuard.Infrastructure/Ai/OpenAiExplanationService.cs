@@ -35,13 +35,13 @@ public sealed class OpenAiExplanationService : IMedicationExplanationService
         _logger = logger;
     }
 
-    public async Task<MedicationExplanation> ExplainAsync(SafetyFinding finding, CancellationToken cancellationToken)
+    public async Task<MedicationExplanation> ExplainAsync(SafetyFinding finding, string? language, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(finding);
 
         if (!_options.ExplanationsEnabled || string.IsNullOrWhiteSpace(_options.ApiKey))
         {
-            return await FallbackAsync(finding, "not-configured", cancellationToken).ConfigureAwait(false);
+            return await FallbackAsync(finding, language, "not-configured", cancellationToken).ConfigureAwait(false);
         }
 
         try
@@ -54,7 +54,7 @@ public sealed class OpenAiExplanationService : IMedicationExplanationService
                 messages = new object[]
                 {
                     new { role = "system", content = ExplanationPrompt.SystemPrompt },
-                    new { role = "user", content = ExplanationPrompt.BuildUserMessage(finding) }
+                    new { role = "user", content = ExplanationPrompt.BuildUserMessage(finding, language) }
                 }
             };
 
@@ -65,7 +65,7 @@ public sealed class OpenAiExplanationService : IMedicationExplanationService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Explanation model returned {StatusCode}.", (int)response.StatusCode);
-                return await FallbackAsync(finding, "provider-error", cancellationToken).ConfigureAwait(false);
+                return await FallbackAsync(finding, language, "provider-error", cancellationToken).ConfigureAwait(false);
             }
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
@@ -82,7 +82,7 @@ public sealed class OpenAiExplanationService : IMedicationExplanationService
             if (!guard.IsAllowed)
             {
                 _logger.LogWarning("Generated explanation rejected by output guard: {Rule}.", guard.ViolatedRule);
-                return await FallbackAsync(finding, "guard-rejected", cancellationToken).ConfigureAwait(false);
+                return await FallbackAsync(finding, language, "guard-rejected", cancellationToken).ConfigureAwait(false);
             }
 
             MedGuardTelemetry.ExplanationRequests.Add(1, new KeyValuePair<string, object?>("source", "model"));
@@ -92,17 +92,17 @@ public sealed class OpenAiExplanationService : IMedicationExplanationService
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             _logger.LogWarning(exception, "Explanation model call failed.");
-            return await FallbackAsync(finding, "provider-unreachable", cancellationToken).ConfigureAwait(false);
+            return await FallbackAsync(finding, language, "provider-unreachable", cancellationToken).ConfigureAwait(false);
         }
     }
 
-    private async Task<MedicationExplanation> FallbackAsync(SafetyFinding finding, string reason, CancellationToken cancellationToken)
+    private async Task<MedicationExplanation> FallbackAsync(SafetyFinding finding, string? language, string reason, CancellationToken cancellationToken)
     {
         MedGuardTelemetry.ExplanationRequests.Add(
             1,
             new KeyValuePair<string, object?>("source", "template"),
             new KeyValuePair<string, object?>("reason", reason));
 
-        return await _fallback.ExplainAsync(finding, cancellationToken).ConfigureAwait(false);
+        return await _fallback.ExplainAsync(finding, language, cancellationToken).ConfigureAwait(false);
     }
 }

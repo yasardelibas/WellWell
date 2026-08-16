@@ -23,7 +23,8 @@ public sealed record UserResponse(
     bool PrivacyNotificationsEnabled,
     bool BiometricLockEnabled,
     bool IsDemoAccount,
-    bool EmailVerified);
+    bool EmailVerified,
+    string PreferredLanguage);
 
 public sealed record AuthResponse(
     string AccessToken,
@@ -35,4 +36,5 @@ public sealed record UpdateProfileRequest(
     string? DisplayName,
     string? TimeZoneId,
     bool? PrivacyNotificationsEnabled,
-    bool? BiometricLockEnabled);
+    bool? BiometricLockEnabled,
+    string? PreferredLanguage = null);

@@ -33,8 +33,12 @@ public static class MedicationEducationPrompt
         If you do not recognise the medication, or are not confident, reply with exactly:
         UNKNOWN
 
-        Otherwise, end your description with this exact sentence:
+        Otherwise, end your description with this exact sentence, translated into the requested
+        response language if it is not English:
         This is general information, not medical advice — ask your pharmacist or doctor for guidance.
+
+        The input includes a "respondInLanguage" field. Write your whole description, including
+        the closing sentence, in that language.
 
         Reply with plain sentences only, no lists or headings.
         """;
@@ -45,7 +49,7 @@ public static class MedicationEducationPrompt
         WriteIndented = false,
     };
 
-    public static string BuildUserMessage(MedicationEducationInput input) =>
+    public static string BuildUserMessage(MedicationEducationInput input, string? language = null) =>
         JsonSerializer.Serialize(
             new
             {
@@ -54,6 +58,7 @@ public static class MedicationEducationPrompt
                 activeIngredients = input.Ingredients,
                 knownUses = input.KnownUses,
                 therapeuticClass = input.KnownClass,
+                respondInLanguage = string.Equals(language, "tr", StringComparison.OrdinalIgnoreCase) ? "Turkish" : "English",
             },
             SerializerOptions);
 }

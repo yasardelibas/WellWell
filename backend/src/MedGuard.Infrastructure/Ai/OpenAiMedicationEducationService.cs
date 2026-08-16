@@ -36,13 +36,13 @@ public sealed class OpenAiMedicationEducationService : IMedicationEducationServi
         _logger = logger;
     }
 
-    public async Task<MedicationEducation> ExplainAsync(MedicationEducationInput input, CancellationToken cancellationToken)
+    public async Task<MedicationEducation> ExplainAsync(MedicationEducationInput input, string? language, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(input);
 
         if (!_options.ExplanationsEnabled || string.IsNullOrWhiteSpace(_options.ApiKey))
         {
-            return await _fallback.ExplainAsync(input, cancellationToken).ConfigureAwait(false);
+            return await _fallback.ExplainAsync(input, language, cancellationToken).ConfigureAwait(false);
         }
 
         try
@@ -55,7 +55,7 @@ public sealed class OpenAiMedicationEducationService : IMedicationEducationServi
                 messages = new object[]
                 {
                     new { role = "system", content = MedicationEducationPrompt.SystemPrompt },
-                    new { role = "user", content = MedicationEducationPrompt.BuildUserMessage(input) },
+                    new { role = "user", content = MedicationEducationPrompt.BuildUserMessage(input, language) },
                 },
             };
 
@@ -66,7 +66,7 @@ public sealed class OpenAiMedicationEducationService : IMedicationEducationServi
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("Education model returned {StatusCode}.", (int)response.StatusCode);
-                return await _fallback.ExplainAsync(input, cancellationToken).ConfigureAwait(false);
+                return await _fallback.ExplainAsync(input, language, cancellationToken).ConfigureAwait(false);
             }
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
@@ -83,7 +83,7 @@ public sealed class OpenAiMedicationEducationService : IMedicationEducationServi
             if (string.IsNullOrWhiteSpace(text) ||
                 text.Contains(MedicationEducationPrompt.UnknownMarker, StringComparison.OrdinalIgnoreCase))
             {
-                return await _fallback.ExplainAsync(input, cancellationToken).ConfigureAwait(false);
+                return await _fallback.ExplainAsync(input, language, cancellationToken).ConfigureAwait(false);
             }
 
             // Education text is subject to the same clinical-advice guard as explanations.
@@ -91,7 +91,7 @@ public sealed class OpenAiMedicationEducationService : IMedicationEducationServi
             if (!guard.IsAllowed)
             {
                 _logger.LogWarning("Generated education rejected by output guard: {Rule}.", guard.ViolatedRule);
-                return await _fallback.ExplainAsync(input, cancellationToken).ConfigureAwait(false);
+                return await _fallback.ExplainAsync(input, language, cancellationToken).ConfigureAwait(false);
             }
 
             return new MedicationEducation(text!, GeneratedByAi: true, IsAvailable: true, $"model:{_options.ExplanationModel}");
@@ -99,7 +99,7 @@ public sealed class OpenAiMedicationEducationService : IMedicationEducationServi
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             _logger.LogWarning(exception, "Education model call failed.");
-            return await _fallback.ExplainAsync(input, cancellationToken).ConfigureAwait(false);
+            return await _fallback.ExplainAsync(input, language, cancellationToken).ConfigureAwait(false);
         }
     }
 }

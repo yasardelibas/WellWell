@@ -75,7 +75,7 @@ public sealed class TemplateExplanationServiceTests
     {
         var service = new TemplateExplanationService();
 
-        var explanation = await service.ExplainAsync(CreateDuplicateFinding(), CancellationToken.None);
+        var explanation = await service.ExplainAsync(CreateDuplicateFinding(), null, CancellationToken.None);
 
         Assert.False(explanation.GeneratedByAi);
         Assert.Equal(TemplateExplanationService.SourceName, explanation.Source);
@@ -105,7 +105,7 @@ public sealed class TemplateExplanationServiceTests
                 false,
                 DateTimeOffset.UtcNow);
 
-            var explanation = await service.ExplainAsync(finding, CancellationToken.None);
+            var explanation = await service.ExplainAsync(finding, null, CancellationToken.None);
 
             Assert.True(
                 ExplanationGuard.Inspect(explanation.Text).IsAllowed,

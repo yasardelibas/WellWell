@@ -85,7 +85,7 @@ public static class CaregiverEndpoints
         dbContext.CaregiverRelationships.Add(relationship);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        await notificationSender.SendCaregiverInvitationAsync(request.Email, rawToken, cancellationToken);
+        await notificationSender.SendCaregiverInvitationAsync(request.Email, rawToken, null, cancellationToken);
         await auditLogger.LogAsync(AuditEventType.CaregiverInvited, userId, relationship.Id, cancellationToken: cancellationToken);
 
         return Results.Created(
@@ -228,8 +228,25 @@ public static class CaregiverEndpoints
                                    relationship.Status == CaregiverRelationshipStatus.Active)
             .ToListAsync(cancellationToken);
 
-        return Results.Ok(relationships.Select(ToResponse).ToList());
+        var ownerIds = relationships.Select(relationship => relationship.OwnerUserId).ToHashSet();
+        var owners = await dbContext.Users
+            .Where(user => ownerIds.Contains(user.Id))
+            .ToDictionaryAsync(user => user.Id, cancellationToken);
+
+        return Results.Ok(relationships.Select(relationship => ToSharedWithMeResponse(relationship, owners[relationship.OwnerUserId])).ToList());
     }
+
+    private static SharedWithMeResponse ToSharedWithMeResponse(CaregiverRelationship relationship, User owner) => new(
+        relationship.Id,
+        owner.Email,
+        owner.DisplayName,
+        relationship.Status.ToString(),
+        relationship.Permissions
+            .Where(permission => permission.Approved)
+            .Select(permission => ToWireValue(permission.Permission))
+            .ToList(),
+        relationship.CreatedAt,
+        relationship.AcceptedAt);
 
     private static async Task<IResult> GetSharedMedicationsAsync(
         Guid id,

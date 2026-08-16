@@ -49,9 +49,9 @@ public sealed record AdherenceInsight(string Message, bool GeneratedByAi, string
 /// </summary>
 public interface IAdherenceInsightService
 {
-    Task<AdherenceInsight> SummarizeWeekAsync(AdherenceStats stats, CancellationToken cancellationToken);
+    Task<AdherenceInsight> SummarizeWeekAsync(AdherenceStats stats, string? language, CancellationToken cancellationToken);
 
-    Task<AdherenceInsight> DailyNudgeAsync(DailyAdherenceStats stats, CancellationToken cancellationToken);
+    Task<AdherenceInsight> DailyNudgeAsync(DailyAdherenceStats stats, string? language, CancellationToken cancellationToken);
 
-    Task<AdherenceInsight> SummarizeInsightsAsync(AdherenceInsightsInput input, CancellationToken cancellationToken);
+    Task<AdherenceInsight> SummarizeInsightsAsync(AdherenceInsightsInput input, string? language, CancellationToken cancellationToken);
 }

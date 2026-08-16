@@ -183,7 +183,7 @@ public static class AuthEndpoints
                 PasswordResetToken.Issue(user.Id, TokenGenerator.Hash(rawToken), clock.UtcNow, PasswordResetLifetime));
 
             await dbContext.SaveChangesAsync(cancellationToken);
-            await notificationSender.SendPasswordResetAsync(user.Email, rawToken, cancellationToken);
+            await notificationSender.SendPasswordResetAsync(user.Email, rawToken, user.PreferredLanguage, cancellationToken);
             await auditLogger.LogAsync(AuditEventType.PasswordResetRequested, user.Id, cancellationToken: cancellationToken);
         }
 
@@ -257,7 +257,8 @@ public static class AuthEndpoints
             request.TimeZoneId,
             request.PrivacyNotificationsEnabled,
             request.BiometricLockEnabled,
-            clock.UtcNow);
+            clock.UtcNow,
+            request.PreferredLanguage);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -378,7 +379,7 @@ public static class AuthEndpoints
             EmailVerificationCode.Issue(user.Id, TokenGenerator.Hash(rawCode), clock.UtcNow, lifetime));
 
         await dbContext.SaveChangesAsync(cancellationToken);
-        await notificationSender.SendEmailVerificationAsync(user.Email, rawCode, cancellationToken);
+        await notificationSender.SendEmailVerificationAsync(user.Email, rawCode, user.PreferredLanguage, cancellationToken);
         await auditLogger.LogAsync(AuditEventType.EmailVerificationRequested, user.Id, cancellationToken: cancellationToken);
     }
 }

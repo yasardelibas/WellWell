@@ -70,8 +70,12 @@ public sealed record MedicationResponse(
     int ActiveScheduleCount,
     int? RemainingQuantity,
     DateTimeOffset? RemainingUpdatedAt,
+    DateOnly? ExpirationDate,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt);
 
 /// <summary>Self-reported count of remaining doses used for refill reminders. Null clears it.</summary>
 public sealed record SetRefillRequest(int? RemainingQuantity);
+
+/// <summary>The expiration date printed on the label. Null clears it.</summary>
+public sealed record SetExpirationRequest(DateOnly? ExpirationDate);

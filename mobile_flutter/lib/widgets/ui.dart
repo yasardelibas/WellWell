@@ -222,7 +222,7 @@ class BackCircle extends StatelessWidget {
     return IconButton.outlined(
       onPressed: () => Navigator.of(context).maybePop(),
       style: IconButton.styleFrom(
-        side: const BorderSide(color: Palette.line),
+        side: BorderSide(color: Palette.line),
         backgroundColor: Palette.surface,
       ),
       icon: const Icon(Icons.chevron_left),
@@ -309,7 +309,7 @@ class CircularProgressRing extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('$percent%', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
-              const Text('complete', style: TextStyle(color: Palette.inkSubtle, fontSize: 12)),
+              Text('complete', style: TextStyle(color: Palette.inkSubtle, fontSize: 12)),
             ],
           ),
         ],
@@ -353,7 +353,7 @@ class FieldRow extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 10),
-      decoration: divider ? const BoxDecoration(border: Border(bottom: BorderSide(color: Palette.line))) : null,
+      decoration: divider ? BoxDecoration(border: Border(bottom: BorderSide(color: Palette.line))) : null,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -380,13 +380,13 @@ class ListRow extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: divider ? const BoxDecoration(border: Border(bottom: BorderSide(color: Palette.line))) : null,
+        decoration: divider ? BoxDecoration(border: Border(bottom: BorderSide(color: Palette.line))) : null,
         child: Row(
           children: [
             Icon(icon, color: Palette.brand),
             const SizedBox(width: 12),
             Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600))),
-            const Icon(Icons.chevron_right, color: Palette.inkSubtle),
+            Icon(Icons.chevron_right, color: Palette.inkSubtle),
           ],
         ),
       ),
@@ -542,6 +542,21 @@ class CheckboxRow extends StatelessWidget {
       ),
     );
   }
+}
+
+void showAppSnackBar(BuildContext context, String message, {String? actionLabel, VoidCallback? onAction}) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Palette.ink,
+        behavior: SnackBarBehavior.floating,
+        action: actionLabel != null && onAction != null
+            ? SnackBarAction(label: actionLabel, textColor: Colors.white, onPressed: onAction)
+            : null,
+      ),
+    );
 }
 
 String greeting() {

@@ -28,9 +28,9 @@ public interface IAuditLogger
 /// <summary>Outbound notifications for invitations, password resets and email verification.</summary>
 public interface INotificationSender
 {
-    Task SendCaregiverInvitationAsync(string email, string token, CancellationToken cancellationToken);
+    Task SendCaregiverInvitationAsync(string email, string token, string? language, CancellationToken cancellationToken);
 
-    Task SendPasswordResetAsync(string email, string token, CancellationToken cancellationToken);
+    Task SendPasswordResetAsync(string email, string token, string? language, CancellationToken cancellationToken);
 
-    Task SendEmailVerificationAsync(string email, string code, CancellationToken cancellationToken);
+    Task SendEmailVerificationAsync(string email, string code, string? language, CancellationToken cancellationToken);
 }

@@ -44,6 +44,9 @@ public sealed class Medication
     /// <summary>When the user last updated <see cref="RemainingQuantity"/>, used to age the count.</summary>
     public DateTimeOffset? RemainingUpdatedAt { get; private set; }
 
+    /// <summary>Printed on the label. Self-reported or scan-extracted, never a clinical instruction.</summary>
+    public DateOnly? ExpirationDate { get; private set; }
+
     public MedicationVerificationStatus VerificationStatus { get; private set; }
         = MedicationVerificationStatus.Unverified;
 
@@ -88,7 +91,8 @@ public sealed class Medication
         string? manufacturer = null,
         string? notes = null,
         DataProvenance? provenance = null,
-        Guid? sourceScanId = null)
+        Guid? sourceScanId = null,
+        DateOnly? expirationDate = null)
     {
         if (string.IsNullOrWhiteSpace(brandName) && string.IsNullOrWhiteSpace(genericName))
         {
@@ -116,6 +120,7 @@ public sealed class Medication
             Notes = notes,
             VerificationStatus = verificationStatus,
             SourceScanId = sourceScanId,
+            ExpirationDate = expirationDate,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -205,6 +210,13 @@ public sealed class Medication
     {
         RemainingQuantity = remainingQuantity is < 0 ? 0 : remainingQuantity;
         RemainingUpdatedAt = remainingQuantity is null ? null : now;
+        UpdatedAt = now;
+    }
+
+    /// <summary>Records the expiration date printed on the label. Passing null clears it.</summary>
+    public void SetExpirationDate(DateOnly? expirationDate, DateTimeOffset now)
+    {
+        ExpirationDate = expirationDate;
         UpdatedAt = now;
     }
 

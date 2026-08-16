@@ -16,7 +16,8 @@ public sealed record MedicationDraft(
     string? Strength,
     string? Route,
     string? LabelDirections,
-    string? Notes);
+    string? Notes,
+    DateOnly? ExpirationDate = null);
 
 public sealed record BuiltMedication(Medication Medication, MedicationVerificationOutcome Outcome);
 
@@ -92,7 +93,8 @@ public sealed class MedicationBuilder
             match?.Manufacturer,
             draft.Notes,
             outcome.Provenance,
-            sourceScanId);
+            sourceScanId,
+            draft.ExpirationDate);
 
         return new BuiltMedication(medication, outcome);
     }

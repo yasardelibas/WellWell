@@ -69,6 +69,41 @@ public sealed class ScanFlowTests : IClassFixture<MedGuardApiFactory>
     }
 
     [Fact]
+    public async Task Confirm_ShouldPersistTheExpirationDate_WhenProvidedExplicitly()
+    {
+        var user = await _factory.RegisterAsync();
+        var scan = await ScanAsync(user, TylenolLabel);
+
+        var response = await user.Client.PostJsonAsync(
+            $"/api/medications/scan/{scan.ScanId}/confirm",
+            EmptyConfirmation with { ExpirationDate = new DateOnly(2027, 6, 30) });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var confirmed = await response.ReadAsync<ConfirmScanResponse>();
+        Assert.Equal(new DateOnly(2027, 6, 30), confirmed.Medication.ExpirationDate);
+    }
+
+    [Fact]
+    public async Task SetExpiration_ShouldUpdateAndClearTheExpirationDate()
+    {
+        var user = await _factory.RegisterAsync();
+        var scan = await ScanAsync(user, TylenolLabel);
+        var confirmed = await (await user.Client.PostJsonAsync(
+            $"/api/medications/scan/{scan.ScanId}/confirm", EmptyConfirmation)).ReadAsync<ConfirmScanResponse>();
+
+        var set = await user.Client.PutJsonAsync(
+            $"/api/medications/{confirmed.Medication.Id}/expiration",
+            new SetExpirationRequest(new DateOnly(2026, 12, 1)));
+        Assert.Equal(HttpStatusCode.OK, set.StatusCode);
+        Assert.Equal(new DateOnly(2026, 12, 1), (await set.ReadAsync<MedicationResponse>()).ExpirationDate);
+
+        var cleared = await user.Client.PutJsonAsync(
+            $"/api/medications/{confirmed.Medication.Id}/expiration",
+            new SetExpirationRequest(null));
+        Assert.Null((await cleared.ReadAsync<MedicationResponse>()).ExpirationDate);
+    }
+
+    [Fact]
     public async Task Confirm_ShouldRejectASecondConfirmation_ForTheSameScan()
     {
         var user = await _factory.RegisterAsync();

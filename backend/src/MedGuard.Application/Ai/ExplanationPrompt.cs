@@ -35,6 +35,8 @@ public static class ExplanationPrompt
         Encourage users to follow their medication label and consult a pharmacist or healthcare professional when appropriate.
 
         Answer in at most 120 words, in plain sentences, without lists or headings.
+
+        The user message includes a "respondInLanguage" field. Write your entire answer in that language.
         """;
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -43,7 +45,7 @@ public static class ExplanationPrompt
         WriteIndented = false
     };
 
-    public static string BuildUserMessage(SafetyFinding finding)
+    public static string BuildUserMessage(SafetyFinding finding, string? language = null)
     {
         var payload = new
         {
@@ -59,7 +61,8 @@ public static class ExplanationPrompt
                 verified = subject.MedicationVerified
             }),
             sourceVerified = finding.SourceVerified,
-            source = finding.Source
+            source = finding.Source,
+            respondInLanguage = string.Equals(language, "tr", StringComparison.OrdinalIgnoreCase) ? "Turkish" : "English"
         };
 
         return JsonSerializer.Serialize(payload, SerializerOptions);

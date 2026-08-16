@@ -57,9 +57,18 @@ public static class AdherenceEndpoints
             doses.Select(dose => dose.ToResponse(timeZone)).ToList(),
             completed,
             total,
-            total == 0
-                ? "No doses are scheduled for today."
-                : $"{completed} of {total} scheduled doses completed."));
+            ProgressLabel(completed, total, user.PreferredLanguage)));
+    }
+
+    private static string ProgressLabel(int completed, int total, string? language)
+    {
+        var tr = string.Equals(language, "tr", StringComparison.OrdinalIgnoreCase);
+        if (total == 0)
+        {
+            return tr ? "Bugün için planlanmış doz yok." : "No doses are scheduled for today.";
+        }
+
+        return tr ? $"{total} planlanmış dozdan {completed} tanesi tamamlandı." : $"{completed} of {total} scheduled doses completed.";
     }
 
     private static async Task<IResult> GetHistoryAsync(
@@ -152,7 +161,7 @@ public static class AdherenceEndpoints
             doses.Count(dose => dose.Status == DoseEventStatus.Missed),
             doses.Count(dose => dose.Status is DoseEventStatus.Pending or DoseEventStatus.Snoozed));
 
-        var insight = await insights.SummarizeWeekAsync(stats, cancellationToken);
+        var insight = await insights.SummarizeWeekAsync(stats, user.PreferredLanguage, cancellationToken);
 
         return Results.Ok(new AdherenceSummaryResponse(
             start,
@@ -191,7 +200,7 @@ public static class AdherenceEndpoints
         var completed = doses.Count(dose => dose.Status == DoseEventStatus.Taken);
         var total = doses.Count;
 
-        var insight = await insights.DailyNudgeAsync(new DailyAdherenceStats(completed, total), cancellationToken);
+        var insight = await insights.DailyNudgeAsync(new DailyAdherenceStats(completed, total), user.PreferredLanguage, cancellationToken);
 
         return Results.Ok(new DailyNudgeResponse(completed, total, insight.Message, insight.GeneratedByAi));
     }
@@ -246,6 +255,7 @@ public static class AdherenceEndpoints
 
         var insight = await insights.SummarizeInsightsAsync(
             new AdherenceInsightsInput(adherencePercent, streak, weakest),
+            user.PreferredLanguage,
             cancellationToken);
 
         return Results.Ok(new AdherenceInsightsResponse(

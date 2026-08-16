@@ -35,30 +35,30 @@ public sealed class OpenAiAdherenceInsightService : IAdherenceInsightService
         _logger = logger;
     }
 
-    public Task<AdherenceInsight> SummarizeWeekAsync(AdherenceStats stats, CancellationToken cancellationToken)
+    public Task<AdherenceInsight> SummarizeWeekAsync(AdherenceStats stats, string? language, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(stats);
         return GenerateAsync(
-            AdherenceInsightPrompt.BuildWeeklyMessage(stats),
-            () => TemplateAdherenceInsightService.BuildWeekly(stats),
+            AdherenceInsightPrompt.BuildWeeklyMessage(stats, language),
+            () => TemplateAdherenceInsightService.BuildWeekly(stats, language),
             cancellationToken);
     }
 
-    public Task<AdherenceInsight> DailyNudgeAsync(DailyAdherenceStats stats, CancellationToken cancellationToken)
+    public Task<AdherenceInsight> DailyNudgeAsync(DailyAdherenceStats stats, string? language, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(stats);
         return GenerateAsync(
-            AdherenceInsightPrompt.BuildDailyMessage(stats),
-            () => TemplateAdherenceInsightService.BuildDaily(stats),
+            AdherenceInsightPrompt.BuildDailyMessage(stats, language),
+            () => TemplateAdherenceInsightService.BuildDaily(stats, language),
             cancellationToken);
     }
 
-    public Task<AdherenceInsight> SummarizeInsightsAsync(AdherenceInsightsInput input, CancellationToken cancellationToken)
+    public Task<AdherenceInsight> SummarizeInsightsAsync(AdherenceInsightsInput input, string? language, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(input);
         return GenerateAsync(
-            AdherenceInsightPrompt.BuildInsightsMessage(input),
-            () => TemplateAdherenceInsightService.BuildInsights(input),
+            AdherenceInsightPrompt.BuildInsightsMessage(input, language),
+            () => TemplateAdherenceInsightService.BuildInsights(input, language),
             cancellationToken);
     }
 

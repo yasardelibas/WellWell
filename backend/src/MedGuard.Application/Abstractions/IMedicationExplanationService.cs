@@ -16,5 +16,6 @@ public interface IMedicationExplanationService
 {
     Task<MedicationExplanation> ExplainAsync(
         SafetyFinding finding,
+        string? language,
         CancellationToken cancellationToken);
 }

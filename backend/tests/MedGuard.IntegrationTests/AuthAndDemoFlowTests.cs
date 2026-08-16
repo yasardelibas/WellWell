@@ -29,6 +29,27 @@ public sealed class AuthFlowTests : IClassFixture<MedGuardApiFactory>
     }
 
     [Fact]
+    public async Task UpdatingPreferredLanguage_ShouldChangeGeneratedContentImmediately()
+    {
+        var user = await _factory.RegisterAsync();
+
+        var beforeUpdate = await user.Client.GetAsync<UserResponse>("/api/me");
+        Assert.Equal("en", beforeUpdate.PreferredLanguage);
+
+        var updateResponse = await user.Client.PutJsonAsync(
+            "/api/me",
+            new UpdateProfileRequest(null, null, null, null, "tr"));
+        Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
+        var updated = await updateResponse.ReadAsync<UserResponse>();
+        Assert.Equal("tr", updated.PreferredLanguage);
+
+        // Nothing was scheduled, but the "no doses" label itself must already be Turkish -
+        // this text is derived fresh from PreferredLanguage on every request, never stored.
+        var today = await user.Client.GetAsync<TodayScheduleResponse>("/api/adherence/today");
+        Assert.Equal("Bugün için planlanmış doz yok.", today.ProgressLabel);
+    }
+
+    [Fact]
     public async Task Register_ShouldSendAVerificationCode_AndLeaveTheAccountUnverified()
     {
         var user = await _factory.RegisterAsync();

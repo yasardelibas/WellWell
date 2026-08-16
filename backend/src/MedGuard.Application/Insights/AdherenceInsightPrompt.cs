@@ -25,6 +25,8 @@ public static class AdherenceInsightPrompt
         - invent numbers that are not in the input
 
         Stay positive, gentle and non-judgemental. Reply with a single plain sentence, no lists or headings.
+
+        The input includes a "respondInLanguage" field. Write your sentence in that language.
         """;
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
@@ -33,7 +35,10 @@ public static class AdherenceInsightPrompt
         WriteIndented = false,
     };
 
-    public static string BuildWeeklyMessage(AdherenceStats stats) =>
+    private static string LanguageName(string? language) =>
+        string.Equals(language, "tr", StringComparison.OrdinalIgnoreCase) ? "Turkish" : "English";
+
+    public static string BuildWeeklyMessage(AdherenceStats stats, string? language = null) =>
         JsonSerializer.Serialize(
             new
             {
@@ -43,10 +48,11 @@ public static class AdherenceInsightPrompt
                 missed = stats.MissedCount,
                 pending = stats.PendingCount,
                 adherencePercent = stats.AdherencePercent,
+                respondInLanguage = LanguageName(language),
             },
             SerializerOptions);
 
-    public static string BuildDailyMessage(DailyAdherenceStats stats) =>
+    public static string BuildDailyMessage(DailyAdherenceStats stats, string? language = null) =>
         JsonSerializer.Serialize(
             new
             {
@@ -54,10 +60,11 @@ public static class AdherenceInsightPrompt
                 completed = stats.CompletedCount,
                 remaining = stats.RemainingCount,
                 total = stats.TotalCount,
+                respondInLanguage = LanguageName(language),
             },
             SerializerOptions);
 
-    public static string BuildInsightsMessage(AdherenceInsightsInput input) =>
+    public static string BuildInsightsMessage(AdherenceInsightsInput input, string? language = null) =>
         JsonSerializer.Serialize(
             new
             {
@@ -65,6 +72,7 @@ public static class AdherenceInsightPrompt
                 adherencePercent = input.AdherencePercent,
                 onTimeStreakDays = input.StreakDays,
                 weakestTimeOfDay = input.WeakestTimeOfDay,
+                respondInLanguage = LanguageName(language),
             },
             SerializerOptions);
 }

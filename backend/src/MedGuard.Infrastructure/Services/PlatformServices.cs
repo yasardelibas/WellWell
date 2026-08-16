@@ -77,19 +77,19 @@ public sealed class LoggingNotificationSender : INotificationSender
         _isProduction = isProduction;
     }
 
-    public Task SendCaregiverInvitationAsync(string email, string token, CancellationToken cancellationToken)
+    public Task SendCaregiverInvitationAsync(string email, string token, string? language, CancellationToken cancellationToken)
     {
         Log("caregiver-invitation", email, token);
         return Task.CompletedTask;
     }
 
-    public Task SendPasswordResetAsync(string email, string token, CancellationToken cancellationToken)
+    public Task SendPasswordResetAsync(string email, string token, string? language, CancellationToken cancellationToken)
     {
         Log("password-reset", email, token);
         return Task.CompletedTask;
     }
 
-    public Task SendEmailVerificationAsync(string email, string code, CancellationToken cancellationToken)
+    public Task SendEmailVerificationAsync(string email, string code, string? language, CancellationToken cancellationToken)
     {
         Log("email-verification", email, code);
         return Task.CompletedTask;

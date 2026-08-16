@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using MedGuard.Api.Common;
 using MedGuard.Api.Features.Medications;
@@ -267,7 +268,46 @@ public static class ScanEndpoints
             request.Strength,
             request.Route ?? extraction?.Route.Value,
             request.LabelDirections ?? extraction?.Directions.Value,
-            Notes: null);
+            Notes: null,
+            ExpirationDate: request.ExpirationDate ?? TryParseLabelDate(extraction?.ExpirationDate.Value));
+    }
+
+    /// <summary>
+    /// Labels print expiration dates in inconsistent formats (full date, or just month/year).
+    /// Tries the common ones before giving up rather than blocking confirmation on a date that
+    /// didn't parse - the user can still enter or correct it manually afterward.
+    /// </summary>
+    private static DateOnly? TryParseLabelDate(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var text = raw.Trim();
+
+        if (DateOnly.TryParse(text, CultureInfo.InvariantCulture, DateTimeStyles.None, out var direct))
+        {
+            return direct;
+        }
+
+        string[] formats =
+        [
+            "MM/dd/yyyy", "M/d/yyyy", "dd/MM/yyyy", "yyyy-MM-dd",
+            "MM/yyyy", "M/yyyy", "MM-yyyy", "MM/yy", "M/yy"
+        ];
+
+        foreach (var format in formats)
+        {
+            if (DateOnly.TryParseExact(text, format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+            {
+                // A month/year-only label date means "expires sometime in this month" -
+                // treat the last day of that month as the conservative expiration point.
+                return format.Contains('d') ? parsed : new DateOnly(parsed.Year, parsed.Month, DateTime.DaysInMonth(parsed.Year, parsed.Month));
+            }
+        }
+
+        return null;
     }
 
     private static LabelExtraction? TryReadExtraction(string json)

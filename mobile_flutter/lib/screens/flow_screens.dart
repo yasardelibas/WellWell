@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../services/api.dart';
 import '../state/auth.dart';
 import '../theme/palette.dart';
@@ -78,7 +79,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
     if (!isHero) return Scaffold(backgroundColor: Palette.canvas, body: body);
     return DecoratedBox(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(colors: Palette.hero, begin: Alignment.topLeft, end: Alignment.bottomRight),
       ),
       child: Scaffold(backgroundColor: Colors.transparent, body: body),
@@ -243,30 +244,48 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           children: [
             const LogoMark(size: 64),
             const SizedBox(height: 8),
-            const Text('MEDGUARD', textAlign: TextAlign.center, style: TextStyle(letterSpacing: 3, color: Palette.inkSubtle, fontSize: 12)),
+            Text('MEDGUARD', textAlign: TextAlign.center, style: TextStyle(letterSpacing: 3, color: Palette.inkSubtle, fontSize: 12)),
             const SizedBox(height: 12),
-            Text(signIn ? 'Welcome back' : 'Create your account', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineMedium),
+            Text(
+              signIn ? AppLocalizations.of(context)!.authWelcomeBack : AppLocalizations.of(context)!.authCreateAccount,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
             const SizedBox(height: 8),
             Text(
-              signIn
-                  ? "Sign in to see your medications and today's reminders."
-                  : 'Your medication list stays private to you unless you choose to share it.',
+              signIn ? AppLocalizations.of(context)!.authSignInSubtitle : AppLocalizations.of(context)!.authSignUpSubtitle,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
             SegmentedAuth(signIn: signIn, onChanged: (v) => setState(() => signIn = v)),
             const SizedBox(height: 20),
-            if (expired) const Text('Your session ended. Please sign in again.', style: TextStyle(color: Palette.attention)),
-            if (!signIn) ...[LabeledField(label: 'Name', controller: name, hint: 'How should we greet you?'), const SizedBox(height: 12)],
-            LabeledField(label: 'Email', controller: email, keyboardType: TextInputType.emailAddress, hint: 'you@example.com'),
+            if (expired) Text(AppLocalizations.of(context)!.authSessionExpired, style: TextStyle(color: Palette.attention)),
+            if (!signIn) ...[
+              LabeledField(label: AppLocalizations.of(context)!.authName, controller: name, hint: 'How should we greet you?'),
+              const SizedBox(height: 12),
+            ],
+            LabeledField(
+              label: AppLocalizations.of(context)!.authEmail,
+              controller: email,
+              keyboardType: TextInputType.emailAddress,
+              hint: 'you@example.com',
+            ),
             const SizedBox(height: 12),
-            LabeledField(label: 'Password', controller: password, obscure: true, hint: signIn ? 'Your password' : 'Create a password'),
+            LabeledField(
+              label: AppLocalizations.of(context)!.authPassword,
+              controller: password,
+              obscure: true,
+              hint: signIn ? 'Your password' : 'Create a password',
+            ),
             if (signIn)
               Align(
                 alignment: Alignment.centerRight,
-                child: TextButton(onPressed: () => context.push('/forgot-password'), child: const Text('Forgot your password?')),
+                child: TextButton(
+                  onPressed: () => context.push('/forgot-password'),
+                  child: Text(AppLocalizations.of(context)!.authForgotPassword),
+                ),
               ),
-            if (error != null) Text(error!, style: const TextStyle(color: Palette.critical)),
+            if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
             const SizedBox(height: 8),
             if (!signIn) ...[
               const Callout(
@@ -275,8 +294,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               ),
               const SizedBox(height: 12),
             ],
-            PrimaryButton(label: signIn ? 'Log In' : 'Sign Up', loading: loading, onPressed: submit),
-            if (signIn) ...[const SizedBox(height: 12), SecondaryButton(label: 'Explore the demo account', loading: demoLoading, onPressed: demo)],
+            PrimaryButton(
+              label: signIn ? AppLocalizations.of(context)!.commonSignIn : AppLocalizations.of(context)!.commonSignUp,
+              loading: loading,
+              onPressed: submit,
+            ),
+            if (signIn) ...[
+              const SizedBox(height: 12),
+              SecondaryButton(label: AppLocalizations.of(context)!.authUseDemoAccount, loading: demoLoading, onPressed: demo),
+            ],
           ],
         ),
       ),
@@ -316,7 +342,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 const Callout(tone: Tone.safe, title: 'Check your email', message: 'If an account exists for that address, a reset link is on its way.')
               else ...[
                 LabeledField(label: 'Email', controller: email, keyboardType: TextInputType.emailAddress),
-                if (error != null) Text(error!, style: const TextStyle(color: Palette.critical)),
+                if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
                 const SizedBox(height: 16),
                 PrimaryButton(
                   label: 'Send reset link',
@@ -393,7 +419,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                 style: const TextStyle(fontSize: 28, letterSpacing: 8, fontWeight: FontWeight.w700),
                 decoration: const InputDecoration(counterText: ''),
               ),
-              if (error != null) Text(error!, style: const TextStyle(color: Palette.critical)),
+              if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
               const SizedBox(height: 16),
               PrimaryButton(
                 label: 'Verify',
@@ -458,7 +484,7 @@ class _SafetyNoticeScreenState extends ConsumerState<SafetyNoticeScreen> {
                     'MedGuard does not provide medical diagnoses or change medication instructions. Always follow your medication label and advice from your healthcare professional.',
               ),
               const Spacer(),
-              if (error != null) Text(error!, style: const TextStyle(color: Palette.critical)),
+              if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
               PrimaryButton(
                 label: 'I understand',
                 loading: loading,

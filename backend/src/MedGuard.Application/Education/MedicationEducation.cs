@@ -24,5 +24,5 @@ public sealed record MedicationEducation(string Message, bool GeneratedByAi, boo
 /// </summary>
 public interface IMedicationEducationService
 {
-    Task<MedicationEducation> ExplainAsync(MedicationEducationInput input, CancellationToken cancellationToken);
+    Task<MedicationEducation> ExplainAsync(MedicationEducationInput input, string? language, CancellationToken cancellationToken);
 }
