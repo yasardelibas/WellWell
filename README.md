@@ -2,7 +2,7 @@
 
 A safety layer between the medication label and the person taking it.
 
-MedGuard scans medication labels, identifies active ingredients against trusted drug data,
+WellWell scans medication labels, identifies active ingredients against trusted drug data,
 detects duplicate active ingredients across the medications a person already takes, and keeps
 reminders and adherence history. It is not a diagnostic tool and never changes medication
 instructions.
