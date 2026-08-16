@@ -32,7 +32,7 @@ public static class ContractMapping
         user.EmailVerified,
         user.PreferredLanguage);
 
-    public static MedicationResponse ToResponse(this Medication medication, int activeScheduleCount = 0) => new(
+    public static MedicationResponse ToResponse(this Medication medication, int activeScheduleCount = 0, string? language = null) => new(
         medication.Id,
         medication.DisplayName,
         medication.BrandName,
@@ -45,7 +45,7 @@ public static class ContractMapping
         medication.Manufacturer,
         medication.Notes,
         ToWireValue(medication.VerificationStatus),
-        ToLabel(medication.VerificationStatus),
+        ToLabel(medication.VerificationStatus, language),
         medication.Ingredients.Select(ToResponse).ToList(),
         medication.Provenance is null
             ? null
@@ -78,13 +78,17 @@ public static class ContractMapping
         _ => "unverified"
     };
 
-    public static string ToLabel(MedicationVerificationStatus status) => status switch
+    public static string ToLabel(MedicationVerificationStatus status, string? language = null)
     {
-        MedicationVerificationStatus.Verified => "Verified against a trusted medication database",
-        MedicationVerificationStatus.VerificationUnavailable => "Verification unavailable right now",
-        MedicationVerificationStatus.NoConfidentMatch => "No confident match found",
-        _ => "Not independently verified"
-    };
+        var tr = string.Equals(language, "tr", StringComparison.OrdinalIgnoreCase);
+        return status switch
+        {
+            MedicationVerificationStatus.Verified => tr ? "Güvenilir bir ilaç veritabanına göre doğrulandı" : "Verified against a trusted medication database",
+            MedicationVerificationStatus.VerificationUnavailable => tr ? "Doğrulama şu anda kullanılamıyor" : "Verification unavailable right now",
+            MedicationVerificationStatus.NoConfidentMatch => tr ? "Güvenilir bir eşleşme bulunamadı" : "No confident match found",
+            _ => tr ? "Bağımsız olarak doğrulanmadı" : "Not independently verified"
+        };
+    }
 
     public static SafetyAnalysisResponse ToResponse(this SafetyAnalysisResult result, string? language = null)
     {
@@ -168,17 +172,17 @@ public static class ContractMapping
         schedule.UserConfirmed,
         schedule.IsActive);
 
-    public static DoseResponse ToResponse(this DoseEvent dose, TimeZoneInfo timeZone) => new(
+    public static DoseResponse ToResponse(this DoseEvent dose, TimeZoneInfo timeZone, string? language = null) => new(
         dose.Id,
         dose.MedicationId,
         dose.ScheduleId,
-        dose.Medication?.DisplayName ?? "Medication",
+        dose.Medication?.DisplayName ?? (string.Equals(language, "tr", StringComparison.OrdinalIgnoreCase) ? "İlaç" : "Medication"),
         dose.Medication?.Strength,
         dose.Schedule?.DoseAmountText,
         dose.ScheduledAt,
         TimeZoneInfo.ConvertTime(dose.ScheduledAt, timeZone).ToString("HH:mm"),
         ToWireValue(dose.Status),
-        ToLabel(dose.Status),
+        ToLabel(dose.Status, language),
         dose.CompletedAt,
         dose.SnoozedUntil);
 
@@ -192,14 +196,18 @@ public static class ContractMapping
     };
 
     /// <summary>Neutral, non-judgemental status wording.</summary>
-    public static string ToLabel(DoseEventStatus status) => status switch
+    public static string ToLabel(DoseEventStatus status, string? language = null)
     {
-        DoseEventStatus.Taken => "Taken",
-        DoseEventStatus.Skipped => "Skipped",
-        DoseEventStatus.Missed => "Missed",
-        DoseEventStatus.Snoozed => "Snoozed",
-        _ => "Pending"
-    };
+        var tr = string.Equals(language, "tr", StringComparison.OrdinalIgnoreCase);
+        return status switch
+        {
+            DoseEventStatus.Taken => tr ? "Alındı" : "Taken",
+            DoseEventStatus.Skipped => tr ? "Atlandı" : "Skipped",
+            DoseEventStatus.Missed => tr ? "Kaçırıldı" : "Missed",
+            DoseEventStatus.Snoozed => tr ? "Ertelendi" : "Snoozed",
+            _ => tr ? "Bekliyor" : "Pending"
+        };
+    }
 
     public static ScheduleSuggestionResponse ToResponse(this ScheduleSuggestion suggestion) => new(
         suggestion.LabelInstruction,

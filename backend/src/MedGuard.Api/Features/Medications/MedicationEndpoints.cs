@@ -35,6 +35,7 @@ public static class MedicationEndpoints
         CancellationToken cancellationToken)
     {
         var userId = currentUser.RequireUserId();
+        var language = await GetLanguageAsync(dbContext, userId, cancellationToken);
 
         var medications = await dbContext.Medications
             .Include(medication => medication.Ingredients)
@@ -49,7 +50,7 @@ public static class MedicationEndpoints
             .ToDictionaryAsync(item => item.MedicationId, item => item.Count, cancellationToken);
 
         var response = medications
-            .Select(medication => medication.ToResponse(scheduleCounts.GetValueOrDefault(medication.Id)))
+            .Select(medication => medication.ToResponse(scheduleCounts.GetValueOrDefault(medication.Id), language))
             .ToList();
 
         return Results.Ok(response);
@@ -75,8 +76,12 @@ public static class MedicationEndpoints
         var scheduleCount = await dbContext.MedicationSchedules
             .CountAsync(schedule => schedule.MedicationId == id && schedule.IsActive, cancellationToken);
 
-        return Results.Ok(medication.ToResponse(scheduleCount));
+        var language = await GetLanguageAsync(dbContext, userId, cancellationToken);
+        return Results.Ok(medication.ToResponse(scheduleCount, language));
     }
+
+    private static Task<string?> GetLanguageAsync(MedGuardDbContext dbContext, Guid userId, CancellationToken cancellationToken) =>
+        dbContext.Users.Where(user => user.Id == userId).Select(user => user.PreferredLanguage).FirstOrDefaultAsync(cancellationToken);
 
     /// <summary>
     /// General, plain-language educational context about a medication. Never dosing or personal
@@ -182,7 +187,8 @@ public static class MedicationEndpoints
         var scheduleCount = await dbContext.MedicationSchedules
             .CountAsync(schedule => schedule.MedicationId == id && schedule.IsActive, cancellationToken);
 
-        return Results.Ok(medication.ToResponse(scheduleCount));
+        var language = await GetLanguageAsync(dbContext, userId, cancellationToken);
+        return Results.Ok(medication.ToResponse(scheduleCount, language));
     }
 
     /// <summary>Records the expiration date printed on the label.</summary>
@@ -211,7 +217,8 @@ public static class MedicationEndpoints
         var scheduleCount = await dbContext.MedicationSchedules
             .CountAsync(schedule => schedule.MedicationId == id && schedule.IsActive, cancellationToken);
 
-        return Results.Ok(medication.ToResponse(scheduleCount));
+        var language = await GetLanguageAsync(dbContext, userId, cancellationToken);
+        return Results.Ok(medication.ToResponse(scheduleCount, language));
     }
 
     private static async Task<IResult> CreateAsync(
@@ -249,7 +256,8 @@ public static class MedicationEndpoints
             ContractMapping.ToWireValue(built.Medication.VerificationStatus),
             cancellationToken);
 
-        return Results.Created($"/api/medications/{built.Medication.Id}", built.Medication.ToResponse());
+        var language = await GetLanguageAsync(dbContext, userId, cancellationToken);
+        return Results.Created($"/api/medications/{built.Medication.Id}", built.Medication.ToResponse(language: language));
     }
 
     private static async Task<IResult> UpdateAsync(
@@ -329,7 +337,8 @@ public static class MedicationEndpoints
         await dbContext.SaveChangesAsync(cancellationToken);
         await auditLogger.LogAsync(AuditEventType.MedicationUpdated, userId, medication.Id, cancellationToken: cancellationToken);
 
-        return Results.Ok(medication.ToResponse());
+        var language = await GetLanguageAsync(dbContext, userId, cancellationToken);
+        return Results.Ok(medication.ToResponse(language: language));
     }
 
     private static async Task<IResult> DeleteAsync(

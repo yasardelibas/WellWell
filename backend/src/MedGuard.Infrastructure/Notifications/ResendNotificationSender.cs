@@ -32,16 +32,16 @@ public sealed class ResendNotificationSender : INotificationSender
         SendAsync(
             "caregiver-invitation",
             email,
-            IsTurkish(language) ? "MedGuard'da bakıcı olarak davet edildiniz" : "You've been invited as a MedGuard caregiver",
+            IsTurkish(language) ? "WellWell'da bakıcı olarak davet edildiniz" : "You've been invited as a WellWell caregiver",
             IsTurkish(language)
                 ? $"""
-                  <p>Birinin MedGuard'daki ilaç düzenini takip etmenize yardımcı olmanız için davet edildiniz.</p>
+                  <p>Birinin WellWell'daki ilaç düzenini takip etmenize yardımcı olmanız için davet edildiniz.</p>
                   <p>Kabul etmek için bu davet kodunu uygulamaya girin:</p>
                   <p style="font-size:28px;font-weight:700;letter-spacing:2px;">{System.Net.WebUtility.HtmlEncode(token)}</p>
                   <p style="color:#64748B;font-size:13px;">Bu daveti beklemiyorsanız, bu e-postayı yok sayabilirsiniz.</p>
                   """
                 : $"""
-                  <p>You've been invited to help keep track of someone's medication routine in MedGuard.</p>
+                  <p>You've been invited to help keep track of someone's medication routine in WellWell.</p>
                   <p>Enter this invitation code in the app to accept:</p>
                   <p style="font-size:28px;font-weight:700;letter-spacing:2px;">{System.Net.WebUtility.HtmlEncode(token)}</p>
                   <p style="color:#64748B;font-size:13px;">If you did not expect this invitation, you can ignore this email.</p>
@@ -52,15 +52,15 @@ public sealed class ResendNotificationSender : INotificationSender
         SendAsync(
             "password-reset",
             email,
-            IsTurkish(language) ? "MedGuard şifrenizi sıfırlayın" : "Reset your MedGuard password",
+            IsTurkish(language) ? "WellWell şifrenizi sıfırlayın" : "Reset your WellWell password",
             IsTurkish(language)
                 ? $"""
-                  <p>MedGuard şifrenizi sıfırlamak için bu kodu kullanın:</p>
+                  <p>WellWell şifrenizi sıfırlamak için bu kodu kullanın:</p>
                   <p style="font-size:28px;font-weight:700;letter-spacing:2px;">{System.Net.WebUtility.HtmlEncode(token)}</p>
                   <p style="color:#64748B;font-size:13px;">Bu kod 30 dakika içinde geçerliliğini yitirir. Şifre sıfırlama talebinde bulunmadıysanız, bu e-postayı yok sayabilirsiniz.</p>
                   """
                 : $"""
-                  <p>Use this code to reset your MedGuard password:</p>
+                  <p>Use this code to reset your WellWell password:</p>
                   <p style="font-size:28px;font-weight:700;letter-spacing:2px;">{System.Net.WebUtility.HtmlEncode(token)}</p>
                   <p style="color:#64748B;font-size:13px;">This code expires in 30 minutes. If you did not request a password reset, you can ignore this email.</p>
                   """,
@@ -70,17 +70,17 @@ public sealed class ResendNotificationSender : INotificationSender
         SendAsync(
             "email-verification",
             email,
-            IsTurkish(language) ? "MedGuard için e-postanızı onaylayın" : "Confirm your email for MedGuard",
+            IsTurkish(language) ? "WellWell için e-postanızı onaylayın" : "Confirm your email for WellWell",
             IsTurkish(language)
                 ? $"""
-                  <p>MedGuard doğrulama kodunuz:</p>
+                  <p>WellWell doğrulama kodunuz:</p>
                   <p style="font-size:32px;font-weight:700;letter-spacing:6px;">{System.Net.WebUtility.HtmlEncode(code)}</p>
-                  <p style="color:#64748B;font-size:13px;">Bu kod {_options.VerificationCodeLifetimeMinutes} dakika içinde geçerliliğini yitirir. Bir MedGuard hesabı oluşturmadıysanız, bu e-postayı yok sayabilirsiniz.</p>
+                  <p style="color:#64748B;font-size:13px;">Bu kod {_options.VerificationCodeLifetimeMinutes} dakika içinde geçerliliğini yitirir. Bir WellWell hesabı oluşturmadıysanız, bu e-postayı yok sayabilirsiniz.</p>
                   """
                 : $"""
-                  <p>Your MedGuard verification code is:</p>
+                  <p>Your WellWell verification code is:</p>
                   <p style="font-size:32px;font-weight:700;letter-spacing:6px;">{System.Net.WebUtility.HtmlEncode(code)}</p>
-                  <p style="color:#64748B;font-size:13px;">This code expires in {_options.VerificationCodeLifetimeMinutes} minutes. If you did not create a MedGuard account, you can ignore this email.</p>
+                  <p style="color:#64748B;font-size:13px;">This code expires in {_options.VerificationCodeLifetimeMinutes} minutes. If you did not create a WellWell account, you can ignore this email.</p>
                   """,
             cancellationToken);
 
