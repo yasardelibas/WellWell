@@ -244,16 +244,40 @@ class AppBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = toneStyles[tone]!;
+    final mark = glyph ?? style.glyph;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.fromLTRB(4, 4, 10, 4),
       decoration: BoxDecoration(
         color: style.background,
         border: Border.all(color: style.border),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        '${glyph ?? style.glyph} $label',
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: style.foreground),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // The glyph sits in a filled circle in the tone colour so info/attention
+          // markers (e.g. the "i") clearly stand out instead of reading as plain text.
+          Container(
+            width: 18,
+            height: 18,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: style.foreground, shape: BoxShape.circle),
+            child: Text(
+              mark,
+              style: TextStyle(
+                fontSize: mark.length > 1 ? 9 : 11,
+                height: 1,
+                fontWeight: FontWeight.w800,
+                color: style.background,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: style.foreground),
+          ),
+        ],
       ),
     );
   }
@@ -389,7 +413,79 @@ class PrimaryButton extends StatelessWidget {
     final child = loading
         ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
         : Text(label);
-    final button = FilledButton(onPressed: loading ? null : onPressed, child: child);
+    final enabled = !loading && onPressed != null;
+    // Paint the WellWell logo gradient (green -> blue) behind a transparent
+    // FilledButton so the primary CTA matches the mark while keeping ripple/press
+    // states. Disabled/loading falls back to a muted flat fill.
+    final button = DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: enabled
+            ? LinearGradient(
+                colors: Palette.brandGradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: enabled ? null : Palette.inkSubtle,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: FilledButton(
+        onPressed: loading ? null : onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          disabledBackgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+        ),
+        child: child,
+      ),
+    );
+    return expanded ? SizedBox(width: double.infinity, child: button) : button;
+  }
+}
+
+/// A themed FilledButton that paints the WellWell logo gradient (green -> blue),
+/// matching the Scan CTA and [PrimaryButton]. Use for primary action buttons that
+/// need a custom height/label (e.g. the inline "Take"/"Add" actions).
+class GradientButton extends StatelessWidget {
+  const GradientButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.height = 44,
+    this.expanded = false,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final double height;
+  final bool expanded;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    final button = DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: enabled
+            ? LinearGradient(
+                colors: Palette.brandGradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: enabled ? null : Palette.inkSubtle,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          disabledBackgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          minimumSize: Size(0, height),
+        ),
+        child: Text(label),
+      ),
+    );
     return expanded ? SizedBox(width: double.infinity, child: button) : button;
   }
 }
@@ -521,15 +617,36 @@ class CircularProgressRing extends StatelessWidget {
 }
 
 class ScreenScaffold extends StatelessWidget {
-  const ScreenScaffold({super.key, required this.children, this.onRefresh});
+  const ScreenScaffold({
+    super.key,
+    required this.children,
+    this.onRefresh,
+    this.title,
+    this.titleWidget,
+    this.subtitle,
+    this.showBack = false,
+    this.trailing,
+  });
 
   final List<Widget> children;
   final Future<void> Function()? onRefresh;
 
+  /// When provided, the title (and optional [subtitle]/[showBack]/[trailing]) render in a
+  /// pinned header that stays fixed while [children] scroll underneath. Omit them to keep
+  /// the legacy behaviour where the whole body scrolls. Use [titleWidget] instead of [title]
+  /// for a fully custom pinned title (e.g. the Home greeting block).
+  final String? title;
+  final Widget? titleWidget;
+  final String? subtitle;
+  final bool showBack;
+  final Widget? trailing;
+
+  bool get _hasHeader => title != null || titleWidget != null || subtitle != null || showBack || trailing != null;
+
   @override
   Widget build(BuildContext context) {
-    final content = ListView(
-      padding: EdgeInsets.fromLTRB(28, MediaQuery.paddingOf(context).top + 8, 28, 32),
+    final list = ListView(
+      padding: EdgeInsets.fromLTRB(28, _hasHeader ? 4 : MediaQuery.paddingOf(context).top + 8, 28, 32),
       children: [
         for (var i = 0; i < children.length; i++) ...[
           if (i > 0) const SizedBox(height: 16),
@@ -537,8 +654,73 @@ class ScreenScaffold extends StatelessWidget {
         ],
       ],
     );
+    final scrollable = onRefresh == null ? list : RefreshIndicator(onRefresh: onRefresh!, child: list);
+
+    if (!_hasHeader) {
+      return Scaffold(body: scrollable);
+    }
     return Scaffold(
-      body: onRefresh == null ? content : RefreshIndicator(onRefresh: onRefresh!, child: content),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _PinnedHeader(title: title, titleWidget: titleWidget, subtitle: subtitle, showBack: showBack, trailing: trailing),
+          Expanded(child: scrollable),
+        ],
+      ),
+    );
+  }
+}
+
+class _PinnedHeader extends StatelessWidget {
+  const _PinnedHeader({this.title, this.titleWidget, this.subtitle, this.showBack = false, this.trailing});
+
+  final String? title;
+  final Widget? titleWidget;
+  final String? subtitle;
+  final bool showBack;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasTitle = title != null || titleWidget != null;
+    return Material(
+      color: Palette.canvas,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, 8, 28, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (showBack) ...[
+                Row(
+                  children: [
+                    const BackCircle(),
+                    const Spacer(),
+                    ?trailing,
+                  ],
+                ),
+                if (hasTitle) const SizedBox(height: 12),
+              ],
+              if (hasTitle)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: titleWidget ??
+                          Text(title!, style: Theme.of(context).textTheme.headlineMedium),
+                    ),
+                    if (trailing != null && !showBack) trailing!,
+                  ],
+                ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 4),
+                Text(subtitle!, style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -72,10 +72,9 @@ class DoseCard extends StatelessWidget {
               children: [
                 if (onTaken != null)
                   Expanded(
-                    child: FilledButton(
+                    child: GradientButton(
+                      label: 'Take',
                       onPressed: busy ? null : onTaken,
-                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-                      child: const Text('Take'),
                     ),
                   ),
                 if (onTaken != null && onSkip != null) const SizedBox(width: 8),

@@ -258,10 +258,10 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const ScreenScaffold(children: [BackCircle(), Center(child: CircularProgressIndicator())]);
+      return const ScreenScaffold(showBack: true, children: [Center(child: CircularProgressIndicator())]);
     }
     if (error != null || item == null) {
-      return ScreenScaffold(children: [const BackCircle(), ErrorBanner(message: error ?? 'Not found', onRetry: load)]);
+      return ScreenScaffold(showBack: true, children: [ErrorBanner(message: error ?? 'Not found', onRetry: load)]);
     }
     final med = item!;
     final active = schedules.where((s) => s.isActive).toList();
@@ -272,9 +272,9 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
 
     return ScreenScaffold(
       onRefresh: load,
+      showBack: true,
+      title: med.displayName,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text(med.displayName, style: Theme.of(context).textTheme.headlineMedium),
         Wrap(
           spacing: 8,
           children: [
@@ -672,10 +672,10 @@ class _NewMedicationScreenState extends ConsumerState<NewMedicationScreen> {
   @override
   Widget build(BuildContext context) {
     return ScreenScaffold(
+      showBack: true,
+      title: 'Add a medication',
+      subtitle: 'Copy the details from the label. Fields marked “Used to verify” are matched against a trusted medication database.',
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Add a medication', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Copy the details from the label. Fields marked “Used to verify” are matched against a trusted medication database.'),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -843,13 +843,13 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const ScreenScaffold(children: [BackCircle(), Center(child: CircularProgressIndicator())]);
+      return const ScreenScaffold(showBack: true, children: [Center(child: CircularProgressIndicator())]);
     }
     return ScreenScaffold(
+      showBack: true,
+      title: 'Edit reminder',
+      subtitle: medication?.displayName,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Edit reminder', style: Theme.of(context).textTheme.headlineMedium),
-        Text(medication?.displayName ?? ''),
         if (suggestion?.labelInstruction != null)
           Callout(title: 'From the label', message: suggestion!.labelInstruction!),
         AppCard(
@@ -1034,14 +1034,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final data = history;
     return ScreenScaffold(
       onRefresh: load,
+      showBack: true,
+      title: 'History',
+      subtitle: selectedMonth == null
+          ? 'Completed, skipped and missed doses over the last two weeks.'
+          : 'Completed, skipped and missed doses in ${formatMonth(selectedMonth!)}.',
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('History', style: Theme.of(context).textTheme.headlineMedium),
-        Text(
-          selectedMonth == null
-              ? 'Completed, skipped and missed doses over the last two weeks.'
-              : 'Completed, skipped and missed doses in ${formatMonth(selectedMonth!)}.',
-        ),
         Row(
           children: [
             IconButton(onPressed: () => _shiftMonth(-1), icon: const Icon(Icons.chevron_left)),
@@ -1212,10 +1210,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
     final d = data;
     return ScreenScaffold(
       onRefresh: load,
+      showBack: true,
+      title: 'Insights',
+      subtitle: 'Your on-time streak and habits over the last 30 days.',
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Insights', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Your on-time streak and habits over the last 30 days.'),
         if (loading)
           const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
         else if (error != null)
@@ -1369,16 +1367,16 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (loading) return const ScreenScaffold(children: [BackCircle(), Center(child: CircularProgressIndicator())]);
+    if (loading) return const ScreenScaffold(showBack: true, children: [Center(child: CircularProgressIndicator())]);
     if (draft == null || card == null) {
-      return ScreenScaffold(children: [const BackCircle(), ErrorBanner(message: error ?? 'Unavailable', onRetry: load)]);
+      return ScreenScaffold(showBack: true, children: [ErrorBanner(message: error ?? 'Unavailable', onRetry: load)]);
     }
     final current = draft!;
     return ScreenScaffold(
+      showBack: true,
+      title: 'Emergency card',
+      subtitle: 'Share only what you choose. The QR code holds a random link, never your medical information.',
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Emergency card', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Share only what you choose. The QR code holds a random link, never your medical information.'),
         AppCard(
           child: ToggleRow(
             label: 'Emergency card is active',
@@ -1594,10 +1592,10 @@ class _CaregiversScreenState extends State<CaregiversScreen> {
   Widget build(BuildContext context) {
     return ScreenScaffold(
       onRefresh: load,
+      showBack: true,
+      title: 'Share access',
+      subtitle: 'You stay the owner of your data. A caregiver only sees exactly what you approve, and you can remove access at any time.',
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Share access', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('You stay the owner of your data. A caregiver only sees exactly what you approve, and you can remove access at any time.'),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1799,10 +1797,10 @@ class _SharedWithMeScreenState extends State<SharedWithMeScreen> {
   Widget build(BuildContext context) {
     return ScreenScaffold(
       onRefresh: load,
+      showBack: true,
+      title: 'Shared with you',
+      subtitle: 'People who have shared their medications and adherence with you.',
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Shared with you', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('People who have shared their medications and adherence with you.'),
         SecondaryButton(
           label: 'I have an invitation code',
           onPressed: () async {
@@ -1899,10 +1897,10 @@ class _RedeemInvitationScreenState extends State<RedeemInvitationScreen> {
   @override
   Widget build(BuildContext context) {
     return ScreenScaffold(
+      showBack: true,
+      title: 'Enter invitation code',
+      subtitle: 'Paste the code the person shared with you to see their medications and adherence. This only works once.',
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Enter invitation code', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Paste the code the person shared with you to see their medications and adherence. This only works once.'),
         AppCard(child: LabeledField(label: 'Invitation code', controller: code, hint: 'The code they copied or shared with you')),
         if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
         PrimaryButton(label: 'Accept invitation', loading: busy, onPressed: _redeem),
@@ -1969,9 +1967,9 @@ class _SharedDetailScreenState extends State<SharedDetailScreen> {
     final noAccessAtAll = !loading && medications == null && adherence == null && error == null;
     return ScreenScaffold(
       onRefresh: load,
+      showBack: true,
+      title: widget.ownerLabel ?? 'Shared with you',
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text(widget.ownerLabel ?? 'Shared with you', style: Theme.of(context).textTheme.headlineMedium),
         if (loading)
           const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
         else ...[
@@ -2081,10 +2079,10 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     return ScreenScaffold(
+      showBack: true,
+      title: 'Personal Information',
+      subtitle: 'How WellWell greets you and the email on this account.',
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Personal Information', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('How WellWell greets you and the email on this account.'),
         AppCard(
           child: Column(
             children: [
@@ -2180,12 +2178,12 @@ class _HealthInfoScreenState extends State<HealthInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (loading) return const ScreenScaffold(children: [BackCircle(), Center(child: CircularProgressIndicator())]);
+    if (loading) return const ScreenScaffold(showBack: true, children: [Center(child: CircularProgressIndicator())]);
     return ScreenScaffold(
+      showBack: true,
+      title: 'Health Information',
+      subtitle: 'Allergies and emergency contact details. These only appear on your emergency card when you switch those fields on.',
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Health Information', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Allergies and emergency contact details. These only appear on your emergency card when you switch those fields on.'),
         AppCard(
           child: Column(
             children: [
@@ -2247,10 +2245,10 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     return ScreenScaffold(
+      showBack: true,
+      title: 'App Settings',
+      subtitle: 'Device lock and how WellWell behaves on this phone.',
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('App Settings', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Device lock and how WellWell behaves on this phone.'),
         AppCard(
           child: ToggleRow(
             label: 'Biometric app lock',
@@ -2360,10 +2358,10 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     return ScreenScaffold(
+      showBack: true,
+      title: 'Notifications',
+      subtitle: 'How reminder alerts appear on the lock screen. WellWell sends a local notification at each confirmed reminder time.',
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Notifications', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('How reminder alerts appear on the lock screen. WellWell sends a local notification at each confirmed reminder time.'),
         AppCard(
           child: ToggleRow(
             label: 'Private notifications',
@@ -2399,10 +2397,10 @@ class PrivacySettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ScreenScaffold(
+      showBack: true,
+      title: 'Privacy',
+      subtitle: 'How WellWell treats medication information on this device.',
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Privacy', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('How WellWell treats medication information on this device.'),
         const AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2469,16 +2467,16 @@ class _FindingExplanationScreenState extends State<FindingExplanationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (loading) return const ScreenScaffold(children: [BackCircle(), Center(child: CircularProgressIndicator())]);
+    if (loading) return const ScreenScaffold(showBack: true, children: [Center(child: CircularProgressIndicator())]);
     final current = finding;
     if (current == null) {
-      return ScreenScaffold(children: [const BackCircle(), ErrorBanner(message: error ?? 'This safety finding is no longer available.', onRetry: load)]);
+      return ScreenScaffold(showBack: true, children: [ErrorBanner(message: error ?? 'This safety finding is no longer available.', onRetry: load)]);
     }
     return ScreenScaffold(
+      showBack: true,
+      title: 'Why am I seeing this?',
+      subtitle: current.title,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Why am I seeing this?', style: Theme.of(context).textTheme.headlineMedium),
-        Text(current.title),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

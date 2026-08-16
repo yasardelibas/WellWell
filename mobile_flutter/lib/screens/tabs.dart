@@ -260,24 +260,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final doses = today?.doses ?? [];
     return ScreenScaffold(
       onRefresh: load,
+      titleWidget: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(greeting(), style: Theme.of(context).textTheme.labelLarge),
+          Text(user?.displayName ?? l10n.homeGreetingFallback, style: Theme.of(context).textTheme.headlineMedium),
+        ],
+      ),
+      trailing: IconButton.outlined(
+        onPressed: () => context.push('/emergency'),
+        icon: const Icon(Icons.qr_code),
+      ),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(greeting(), style: Theme.of(context).textTheme.labelLarge),
-                  Text(user?.displayName ?? l10n.homeGreetingFallback, style: Theme.of(context).textTheme.headlineMedium),
-                ],
-              ),
-            ),
-            IconButton.outlined(
-              onPressed: () => context.push('/emergency'),
-              icon: const Icon(Icons.qr_code),
-            ),
-          ],
-        ),
         if (nudge != null && nudge!.totalCount > 0)
           InsightCard(message: nudge!.message, generatedByAi: nudge!.generatedByAi),
         if (findings.isNotEmpty)
@@ -520,31 +514,10 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
   Widget build(BuildContext context) {
     return ScreenScaffold(
       onRefresh: load,
+      title: 'Medications',
+      subtitle: 'Everything you have confirmed and saved in WellWell.',
+      trailing: GradientButton(label: 'Add', onPressed: addSheet, height: 40),
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Medications', style: Theme.of(context).textTheme.headlineMedium),
-                  const Text('Everything you have confirmed and saved in WellWell.'),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            FilledButton(
-              onPressed: addSheet,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(64, 40),
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: const Text('Add'),
-            ),
-          ],
-        ),
         if (!loading && error == null && items.isNotEmpty) ...[
           Row(
             children: [
@@ -718,9 +691,9 @@ class _SafetyScreenState extends State<SafetyScreen> {
     final data = analysis;
     return ScreenScaffold(
       onRefresh: load,
+      title: 'Safety',
+      subtitle: 'Deterministic checks across the medications saved in WellWell.',
       children: [
-        Text('Safety', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Deterministic checks across the medications saved in WellWell.'),
         if (loading)
           const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
         else if (error != null)
@@ -753,9 +726,9 @@ class ProfileScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).user;
     return ScreenScaffold(
+      title: 'Profile',
+      subtitle: 'Your account, health details and app settings.',
       children: [
-        Text('Profile', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Your account, health details and app settings.'),
         AppCard(
           child: Row(
             children: [

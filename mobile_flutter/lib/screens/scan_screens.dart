@@ -433,12 +433,10 @@ class _ManualScanScreenState extends ConsumerState<ManualScanScreen> {
   Widget build(BuildContext context) {
     final demo = ref.watch(authProvider).user?.isDemoAccount == true;
     return ScreenScaffold(
+      showBack: true,
+      title: 'Type the label text',
+      subtitle: 'Copy the medication name, the active ingredients and the directions exactly as printed. WellWell matches them against trusted medication data and you confirm the result.',
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Type the label text', style: Theme.of(context).textTheme.headlineMedium),
-        const Text(
-          'Copy the medication name, the active ingredients and the directions exactly as printed. WellWell matches them against trusted medication data and you confirm the result.',
-        ),
         TextField(
           controller: controller,
           maxLines: 8,
@@ -559,8 +557,8 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
     final current = scan;
     if (current == null) {
       return ScreenScaffold(
+        showBack: true,
         children: [
-          const Align(alignment: Alignment.centerLeft, child: BackCircle()),
           const Callout(title: 'Nothing to review', message: 'Scan a medication label to see the extracted details.'),
           PrimaryButton(label: 'Open the scanner', onPressed: () => context.go('/scan')),
         ],
@@ -569,8 +567,8 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
 
     if (current.status == 'extraction_failed') {
       return ScreenScaffold(
+        showBack: true,
         children: [
-          const Align(alignment: Alignment.centerLeft, child: BackCircle()),
           Callout(tone: Tone.attention, title: "We couldn't read the label clearly", message: current.message),
           PrimaryButton(label: 'Try again', onPressed: () => context.go('/scan')),
           SecondaryButton(label: 'Enter the details manually', onPressed: () => context.replace('/medication/new')),
@@ -582,10 +580,10 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
     final verified = current.verificationStatus.toLowerCase() == 'verified';
 
     return ScreenScaffold(
+      showBack: true,
+      title: 'Scan result',
+      subtitle: current.message,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Scan result', style: Theme.of(context).textTheme.headlineMedium),
-        Text(current.message),
         if (low)
           Callout(
             tone: Tone.attention,
@@ -815,9 +813,9 @@ class ScanResultScreen extends StatelessWidget {
     final medication = outcome.medication;
     final safety = outcome.safety;
     return ScreenScaffold(
+      title: '${medication.displayName} was saved',
+      subtitle: 'WellWell checked it against the medications already in your list.',
       children: [
-        Text('${medication.displayName} was saved', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('WellWell checked it against the medications already in your list.'),
         SafetySummaryCard(analysis: safety),
         ...safety.findings.map((f) => FindingCard(finding: f)),
         AppCard(
