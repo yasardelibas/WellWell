@@ -574,7 +574,7 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
       return ScreenScaffold(
         showBack: true,
         children: [
-          Callout(tone: Tone.attention, title: l10n.scanExtractionFailedTitle, message: current.message),
+          Callout(tone: Tone.attention, title: l10n.scanExtractionFailedTitle, message: l10n.scanExtractionFailedMessage),
           PrimaryButton(label: l10n.commonTryAgain, onPressed: () => context.go('/scan')),
           SecondaryButton(label: l10n.scanEnterDetailsManually, onPressed: () => context.replace('/medication/new')),
         ],

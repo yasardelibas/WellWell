@@ -1381,6 +1381,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get scanExtractionFailedTitle => 'Etiketi net okuyamadık';
 
   @override
+  String get scanExtractionFailedMessage =>
+      'Daha iyi ışıkta tekrar deneyin veya bilgileri elle girin.';
+
+  @override
   String get scanEnterDetailsManually => 'Bilgileri elle gir';
 
   @override

@@ -411,6 +411,7 @@
   "scanReviewNothingMessage": "Çıkarılan bilgileri görmek için bir ilaç etiketi tarayın.",
   "scanOpenScanner": "Tarayıcıyı aç",
   "scanExtractionFailedTitle": "Etiketi net okuyamadık",
+  "scanExtractionFailedMessage": "Daha iyi ışıkta tekrar deneyin veya bilgileri elle girin.",
   "scanEnterDetailsManually": "Bilgileri elle gir",
   "scanReviewLowConfidenceTitle": "Lütfen bilgileri gözden geçirin",
   "scanReviewLowConfidenceMessage": "Etiket %{confidence} güvenle okundu. Onaylamadan önce her alanı etiketle karşılaştırın.",
