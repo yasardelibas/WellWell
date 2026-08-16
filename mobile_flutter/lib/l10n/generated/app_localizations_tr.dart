@@ -82,6 +82,9 @@ class AppLocalizationsTr extends AppLocalizations {
       'Oturumunuz sona erdi. Lütfen tekrar giriş yapın.';
 
   @override
+  String get authFieldsRequired => 'Lütfen tüm alanları doldurun.';
+
+  @override
   String get profileTitle => 'Profil';
 
   @override
@@ -482,6 +485,28 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get forgotPasswordSendButton => 'Sıfırlama bağlantısı gönder';
+
+  @override
+  String get forgotPasswordCodeLabel => 'Sıfırlama kodu';
+
+  @override
+  String get forgotPasswordCodeHint => 'E-postadaki kodu yapıştırın';
+
+  @override
+  String get forgotPasswordNewPasswordLabel => 'Yeni şifre';
+
+  @override
+  String get forgotPasswordResetButton => 'Şifreyi sıfırla';
+
+  @override
+  String get forgotPasswordResetDoneTitle => 'Şifre güncellendi';
+
+  @override
+  String get forgotPasswordResetDoneMessage =>
+      'Şifreniz değiştirildi. Lütfen yeni şifrenizle tekrar giriş yapın.';
+
+  @override
+  String get forgotPasswordBackToSignIn => 'Girişe dön';
 
   @override
   String get verifyEmailTitle => 'E-postanızı doğrulayın';
@@ -1089,9 +1114,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get caregiversInvitationCreatedTitle => 'Davet oluşturuldu';
 
   @override
-  String caregiversInvitationCreatedMessage(Object code) {
-    return 'Kabul edebilmesi için bu tek kullanımlık kodu bakıcıyla paylaşın: $code';
-  }
+  String get caregiversInvitationCreatedMessage =>
+      'Kabul edebilmesi için bu tek kullanımlık kodu bakıcıyla paylaşın.';
 
   @override
   String get caregiversPeopleWithAccess => 'Erişimi olanlar';

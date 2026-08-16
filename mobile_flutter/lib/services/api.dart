@@ -370,6 +370,13 @@ class Api {
         anonymous: true,
       );
 
+  static Future<void> resetPassword(String token, String newPassword) => apiClient.post(
+        '/api/auth/reset-password',
+        (_) {},
+        body: {'token': token, 'newPassword': newPassword},
+        anonymous: true,
+      );
+
   static Future<void> logout(String? refreshToken) => apiClient.post(
         '/api/auth/logout',
         (_) {},
