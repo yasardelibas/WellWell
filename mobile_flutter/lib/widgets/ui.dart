@@ -392,6 +392,9 @@ class VerifyRoleChip extends StatelessWidget {
       ),
       child: Text(
         used ? AppLocalizations.of(context)!.commonUsedToVerify : AppLocalizations.of(context)!.commonNotUsedToVerify,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
