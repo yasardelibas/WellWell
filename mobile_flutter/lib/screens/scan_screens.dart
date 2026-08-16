@@ -829,7 +829,7 @@ class ScanResultScreen extends StatelessWidget {
                 children: [
                   Expanded(child: Text(l10n.scanResultSavedMedicationTitle, style: Theme.of(context).textTheme.titleMedium)),
                   AppBadge(
-                    label: medication.verificationLabel,
+                    label: medication.isVerified ? l10n.commonVerified : l10n.commonUnverified,
                     tone: verificationTone(medication.verificationStatus),
                     glyph: verificationGlyph(medication.verificationStatus),
                   ),

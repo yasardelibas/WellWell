@@ -284,7 +284,7 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
           spacing: 8,
           children: [
             AppBadge(
-              label: med.verificationLabel,
+              label: med.isVerified ? l10n.commonVerified : l10n.commonUnverified,
               tone: verificationTone(med.verificationStatus),
               glyph: verificationGlyph(med.verificationStatus),
             ),
