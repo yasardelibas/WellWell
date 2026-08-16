@@ -5,7 +5,7 @@ import 'palette.dart';
 /// Builds a theme for the given brightness. Safe to call for both brightnesses back-to-back
 /// (e.g. `theme: buildTheme(Brightness.light), darkTheme: buildTheme(Brightness.dark)`) since
 /// it sets [Palette]'s mode before reading any colour, independent of call order — the caller
-/// (`MedGuardApp.build`) is still responsible for setting the *live* mode afterward, since this
+/// (`WellWellApp.build`) is still responsible for setting the *live* mode afterward, since this
 /// function's job is only to produce a fixed [ThemeData] snapshot for one brightness.
 ThemeData buildTheme(Brightness brightness) {
   Palette.setBrightness(brightness);

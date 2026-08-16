@@ -1,17 +1,215 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../theme/palette.dart';
+
+/// A themed date picker presented as a rounded bottom sheet with a Cupertino
+/// wheel, matching the app's time picker instead of the stock Material dialog.
+/// Returns the chosen date, or null if the sheet is dismissed/cancelled.
+Future<DateTime?> showBrandDatePicker({
+  required BuildContext context,
+  required DateTime initialDate,
+  required DateTime firstDate,
+  required DateTime lastDate,
+  String? title,
+}) {
+  // Clamp so the wheel never starts outside the allowed range (Cupertino asserts on this).
+  DateTime clamp(DateTime value) {
+    if (value.isBefore(firstDate)) return firstDate;
+    if (value.isAfter(lastDate)) return lastDate;
+    return value;
+  }
+
+  var temp = clamp(initialDate);
+  return showModalBottomSheet<DateTime>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (sheetContext) {
+      final l10n = AppLocalizations.of(sheetContext)!;
+      return Container(
+        decoration: BoxDecoration(
+          color: Palette.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Palette.line,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 12, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title ?? l10n.pickerSelectDate,
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Palette.ink),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(sheetContext),
+                      child: Text(l10n.commonCancel, style: TextStyle(color: Palette.inkMuted)),
+                    ),
+                    const SizedBox(width: 4),
+                    FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: Palette.brand),
+                      onPressed: () => Navigator.pop(sheetContext, temp),
+                      child: Text(l10n.commonDone),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 240,
+                child: CupertinoTheme(
+                  data: CupertinoThemeData(brightness: Theme.of(sheetContext).brightness),
+                  child: CupertinoDatePicker(
+                    mode: CupertinoDatePickerMode.date,
+                    initialDateTime: temp,
+                    minimumDate: firstDate,
+                    maximumDate: lastDate,
+                    onDateTimeChanged: (value) => temp = value,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Themed time picker (24h) presented as a rounded bottom sheet with a Cupertino
+/// wheel, matching [showBrandDatePicker]. Returns "HH:mm", or null if cancelled.
+Future<String?> showBrandTimePicker({
+  required BuildContext context,
+  required String initialTime,
+  String? title,
+}) {
+  final parts = initialTime.split(':');
+  final hour = (parts.isNotEmpty ? int.tryParse(parts[0]) ?? 8 : 8).clamp(0, 23);
+  final minute = (parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0).clamp(0, 59);
+  final now = DateTime.now();
+  var temp = DateTime(now.year, now.month, now.day, hour, minute);
+
+  String format(DateTime v) =>
+      '${v.hour.toString().padLeft(2, '0')}:${v.minute.toString().padLeft(2, '0')}';
+
+  return showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (sheetContext) {
+      final l10n = AppLocalizations.of(sheetContext)!;
+      return Container(
+        decoration: BoxDecoration(
+          color: Palette.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Palette.line,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 12, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title ?? l10n.pickerReminderTime,
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Palette.ink),
+                          ),
+                          Text(
+                            l10n.pickerRepeatsDaily,
+                            style: TextStyle(color: Palette.inkMuted, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(sheetContext),
+                      child: Text(l10n.commonCancel, style: TextStyle(color: Palette.inkMuted)),
+                    ),
+                    const SizedBox(width: 4),
+                    FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: Palette.brand),
+                      onPressed: () => Navigator.pop(sheetContext, format(temp)),
+                      child: Text(l10n.commonDone),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 216,
+                child: CupertinoTheme(
+                  data: CupertinoThemeData(brightness: Theme.of(sheetContext).brightness),
+                  child: CupertinoDatePicker(
+                    mode: CupertinoDatePickerMode.time,
+                    use24hFormat: true,
+                    initialDateTime: temp,
+                    onDateTimeChanged: (value) => temp = value,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
 
 class LogoMark extends StatelessWidget {
   const LogoMark({super.key, this.size = 64, this.onDark = false});
 
   final double size;
+
+  /// Kept for API compatibility with existing call sites; the WellWell mark is a
+  /// full-color asset, so it reads well on both light and dark backgrounds.
   final bool onDark;
 
   @override
   Widget build(BuildContext context) {
-    final color = onDark ? Colors.white : Palette.brand;
-    return Icon(Icons.shield_outlined, size: size, color: color);
+    // Wrapped in Center so a parent with tight cross-axis constraints (e.g. a
+    // ListView child) can't stretch the square mark into a cropped wide strip.
+    return Center(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.22),
+        child: Image.asset(
+          'assets/brand/logo.png',
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+        ),
+      ),
+    );
   }
 }
 
@@ -49,16 +247,45 @@ class AppBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = toneStyles[tone]!;
+    final mark = glyph ?? style.glyph;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.fromLTRB(4, 4, 10, 4),
       decoration: BoxDecoration(
         color: style.background,
         border: Border.all(color: style.border),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        '${glyph ?? style.glyph} $label',
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: style.foreground),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // The glyph sits in a filled circle in the tone colour so info/attention
+          // markers (e.g. the "i") clearly stand out instead of reading as plain text.
+          Container(
+            width: 18,
+            height: 18,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(color: style.foreground, shape: BoxShape.circle),
+            child: Text(
+              mark,
+              style: TextStyle(
+                fontSize: mark.length > 1 ? 9 : 11,
+                height: 1,
+                fontWeight: FontWeight.w800,
+                color: style.background,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              softWrap: false,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: style.foreground),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -107,6 +334,7 @@ class LabeledField extends StatelessWidget {
     this.maxLines = 1,
     this.enabled = true,
     this.usedForVerification,
+    this.icon,
   });
 
   final String label;
@@ -118,6 +346,7 @@ class LabeledField extends StatelessWidget {
   final bool enabled;
   /// True when this value is sent to the medication database. False when it is stored only.
   final bool? usedForVerification;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -126,6 +355,10 @@ class LabeledField extends StatelessWidget {
       children: [
         Row(
           children: [
+            if (icon != null) ...[
+              Icon(icon, size: 18, color: Palette.inkSubtle),
+              const SizedBox(width: 8),
+            ],
             Expanded(child: Text(label, style: Theme.of(context).textTheme.labelLarge)),
             if (usedForVerification != null) VerifyRoleChip(used: usedForVerification!),
           ],
@@ -158,7 +391,10 @@ class VerifyRoleChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        used ? 'Used to verify' : 'Not used to verify',
+        used ? AppLocalizations.of(context)!.commonUsedToVerify : AppLocalizations.of(context)!.commonNotUsedToVerify,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
@@ -188,7 +424,79 @@ class PrimaryButton extends StatelessWidget {
     final child = loading
         ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
         : Text(label);
-    final button = FilledButton(onPressed: loading ? null : onPressed, child: child);
+    final enabled = !loading && onPressed != null;
+    // Paint the WellWell logo gradient (green -> blue) behind a transparent
+    // FilledButton so the primary CTA matches the mark while keeping ripple/press
+    // states. Disabled/loading falls back to a muted flat fill.
+    final button = DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: enabled
+            ? LinearGradient(
+                colors: Palette.brandGradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: enabled ? null : Palette.inkSubtle,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: FilledButton(
+        onPressed: loading ? null : onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          disabledBackgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+        ),
+        child: child,
+      ),
+    );
+    return expanded ? SizedBox(width: double.infinity, child: button) : button;
+  }
+}
+
+/// A themed FilledButton that paints the WellWell logo gradient (green -> blue),
+/// matching the Scan CTA and [PrimaryButton]. Use for primary action buttons that
+/// need a custom height/label (e.g. the inline "Take"/"Add" actions).
+class GradientButton extends StatelessWidget {
+  const GradientButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.height = 44,
+    this.expanded = false,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final double height;
+  final bool expanded;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    final button = DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: enabled
+            ? LinearGradient(
+                colors: Palette.brandGradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              )
+            : null,
+        color: enabled ? null : Palette.inkSubtle,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          disabledBackgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          minimumSize: Size(0, height),
+        ),
+        child: Text(label),
+      ),
+    );
     return expanded ? SizedBox(width: double.infinity, child: button) : button;
   }
 }
@@ -224,6 +532,7 @@ class BackCircle extends StatelessWidget {
       style: IconButton.styleFrom(
         side: BorderSide(color: Palette.line),
         backgroundColor: Palette.surface,
+        foregroundColor: Palette.ink,
       ),
       icon: const Icon(Icons.chevron_left),
     );
@@ -243,8 +552,8 @@ class SegmentedAuth extends StatelessWidget {
       decoration: BoxDecoration(color: Palette.surfaceMuted, borderRadius: BorderRadius.circular(999)),
       child: Row(
         children: [
-          _chip('Log In', signIn, () => onChanged(true)),
-          _chip('Sign Up', !signIn, () => onChanged(false)),
+          _chip(AppLocalizations.of(context)!.authTabLogIn, signIn, () => onChanged(true)),
+          _chip(AppLocalizations.of(context)!.authTabSignUp, !signIn, () => onChanged(false)),
         ],
       ),
     );
@@ -309,7 +618,7 @@ class CircularProgressRing extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('$percent%', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
-              Text('complete', style: TextStyle(color: Palette.inkSubtle, fontSize: 12)),
+              Text(AppLocalizations.of(context)!.progressComplete, style: TextStyle(color: Palette.inkSubtle, fontSize: 12)),
             ],
           ),
         ],
@@ -319,15 +628,36 @@ class CircularProgressRing extends StatelessWidget {
 }
 
 class ScreenScaffold extends StatelessWidget {
-  const ScreenScaffold({super.key, required this.children, this.onRefresh});
+  const ScreenScaffold({
+    super.key,
+    required this.children,
+    this.onRefresh,
+    this.title,
+    this.titleWidget,
+    this.subtitle,
+    this.showBack = false,
+    this.trailing,
+  });
 
   final List<Widget> children;
   final Future<void> Function()? onRefresh;
 
+  /// When provided, the title (and optional [subtitle]/[showBack]/[trailing]) render in a
+  /// pinned header that stays fixed while [children] scroll underneath. Omit them to keep
+  /// the legacy behaviour where the whole body scrolls. Use [titleWidget] instead of [title]
+  /// for a fully custom pinned title (e.g. the Home greeting block).
+  final String? title;
+  final Widget? titleWidget;
+  final String? subtitle;
+  final bool showBack;
+  final Widget? trailing;
+
+  bool get _hasHeader => title != null || titleWidget != null || subtitle != null || showBack || trailing != null;
+
   @override
   Widget build(BuildContext context) {
-    final content = ListView(
-      padding: EdgeInsets.fromLTRB(28, MediaQuery.paddingOf(context).top + 8, 28, 32),
+    final list = ListView(
+      padding: EdgeInsets.fromLTRB(28, _hasHeader ? 4 : MediaQuery.paddingOf(context).top + 8, 28, 32),
       children: [
         for (var i = 0; i < children.length; i++) ...[
           if (i > 0) const SizedBox(height: 16),
@@ -335,33 +665,112 @@ class ScreenScaffold extends StatelessWidget {
         ],
       ],
     );
+    final scrollable = onRefresh == null ? list : RefreshIndicator(onRefresh: onRefresh!, child: list);
+
+    if (!_hasHeader) {
+      return Scaffold(body: scrollable);
+    }
     return Scaffold(
-      body: onRefresh == null ? content : RefreshIndicator(onRefresh: onRefresh!, child: content),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _PinnedHeader(title: title, titleWidget: titleWidget, subtitle: subtitle, showBack: showBack, trailing: trailing),
+          Expanded(child: scrollable),
+        ],
+      ),
+    );
+  }
+}
+
+class _PinnedHeader extends StatelessWidget {
+  const _PinnedHeader({this.title, this.titleWidget, this.subtitle, this.showBack = false, this.trailing});
+
+  final String? title;
+  final Widget? titleWidget;
+  final String? subtitle;
+  final bool showBack;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasTitle = title != null || titleWidget != null;
+    return Material(
+      color: Palette.canvas,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(28, 8, 28, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (showBack) ...[
+                Row(
+                  children: [
+                    const BackCircle(),
+                    const Spacer(),
+                    ?trailing,
+                  ],
+                ),
+                if (hasTitle) const SizedBox(height: 12),
+              ],
+              if (hasTitle)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: titleWidget ??
+                          Text(title!, style: Theme.of(context).textTheme.headlineMedium),
+                    ),
+                    if (trailing != null && !showBack) trailing!,
+                  ],
+                ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 4),
+                Text(subtitle!, style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
 
 class FieldRow extends StatelessWidget {
-  const FieldRow({super.key, required this.label, this.value, this.divider = true});
+  const FieldRow({super.key, required this.label, this.value, this.divider = true, this.icon});
 
   final String label;
   final String? value;
   final bool divider;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 4),
+        Text(value == null || value!.isEmpty ? '—' : value!, style: Theme.of(context).textTheme.bodyLarge),
+      ],
+    );
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: divider ? BoxDecoration(border: Border(bottom: BorderSide(color: Palette.line))) : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelLarge),
-          const SizedBox(height: 4),
-          Text(value == null || value!.isEmpty ? '—' : value!, style: Theme.of(context).textTheme.bodyLarge),
-        ],
-      ),
+      child: icon == null
+          ? content
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Icon(icon, size: 20, color: Palette.inkSubtle),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: content),
+              ],
+            ),
     );
   }
 }
@@ -428,11 +837,12 @@ class ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Callout(
       tone: Tone.critical,
-      title: 'Something went wrong',
+      title: l10n.commonSomethingWentWrong,
       message: message,
-      child: onRetry == null ? null : SecondaryButton(label: 'Try again', onPressed: onRetry),
+      child: onRetry == null ? null : SecondaryButton(label: l10n.commonTryAgain, onPressed: onRetry),
     );
   }
 }
@@ -559,25 +969,41 @@ void showAppSnackBar(BuildContext context, String message, {String? actionLabel,
     );
 }
 
-String greeting() {
+String greeting(BuildContext context) {
+  final l10n = AppLocalizations.of(context)!;
   final hour = DateTime.now().hour;
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return l10n.greetingMorning;
+  if (hour < 18) return l10n.greetingAfternoon;
+  return l10n.greetingEvening;
 }
 
 String initials(String name) {
   final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).take(2);
-  if (parts.isEmpty) return 'MG';
+  if (parts.isEmpty) return 'WW';
   return parts.map((p) => p[0].toUpperCase()).join();
 }
 
-const caregiverPermissions = [
-  ('VIEW_MEDICATION_LIST', 'See the medication list'),
-  ('VIEW_ADHERENCE', 'See taken and missed doses'),
-  ('VIEW_SCHEDULE', 'See reminder times'),
-  ('RECEIVE_MISSED_DOSE_ALERT', 'Be alerted about missed doses'),
+const caregiverPermissionCodes = [
+  'VIEW_MEDICATION_LIST',
+  'VIEW_ADHERENCE',
+  'VIEW_SCHEDULE',
+  'RECEIVE_MISSED_DOSE_ALERT',
 ];
+
+String caregiverPermissionLabel(String code, AppLocalizations l10n) {
+  switch (code) {
+    case 'VIEW_MEDICATION_LIST':
+      return l10n.caregiverPermViewMedications;
+    case 'VIEW_ADHERENCE':
+      return l10n.caregiverPermViewAdherence;
+    case 'VIEW_SCHEDULE':
+      return l10n.caregiverPermViewSchedule;
+    case 'RECEIVE_MISSED_DOSE_ALERT':
+      return l10n.caregiverPermMissedAlerts;
+    default:
+      return code;
+  }
+}
 
 const demoLabel = '''PAROL
 Paracetamol 500 mg

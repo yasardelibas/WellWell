@@ -260,24 +260,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final doses = today?.doses ?? [];
     return ScreenScaffold(
       onRefresh: load,
+      titleWidget: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(greeting(context), style: Theme.of(context).textTheme.labelLarge),
+          Text(user?.displayName ?? l10n.homeGreetingFallback, style: Theme.of(context).textTheme.headlineMedium),
+        ],
+      ),
+      trailing: IconButton.outlined(
+        onPressed: () => context.push('/emergency'),
+        icon: const Icon(Icons.qr_code),
+      ),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(greeting(), style: Theme.of(context).textTheme.labelLarge),
-                  Text(user?.displayName ?? l10n.homeGreetingFallback, style: Theme.of(context).textTheme.headlineMedium),
-                ],
-              ),
-            ),
-            IconButton.outlined(
-              onPressed: () => context.push('/emergency'),
-              icon: const Icon(Icons.qr_code),
-            ),
-          ],
-        ),
         if (nudge != null && nudge!.totalCount > 0)
           InsightCard(message: nudge!.message, generatedByAi: nudge!.generatedByAi),
         if (findings.isNotEmpty)
@@ -350,9 +344,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           const Text('🔥', style: TextStyle(fontSize: 16)),
                           const SizedBox(width: 6),
                           Text(
-                            insights!.streakDays == 1
-                                ? '1-day streak'
-                                : '${insights!.streakDays}-day streak',
+                            l10n.homeStreakBadge(insights!.streakDays),
                             style: TextStyle(fontWeight: FontWeight.w700, color: dark ? const Color(0xFFFDBA74) : const Color(0xFFC2410C)),
                           ),
                         ],
@@ -481,6 +473,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
   }
 
   void addSheet() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -490,12 +483,12 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Add a medication', style: Theme.of(context).textTheme.headlineMedium),
+            Text(l10n.medsAddSheetTitle, style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 16),
             ListTile(
               leading: Icon(Icons.camera_alt_outlined, color: Palette.brand),
-              title: const Text('Scan a label'),
-              subtitle: const Text('Use your camera. MedGuard reads the name and ingredients for you to confirm.'),
+              title: Text(l10n.medsScanLabelTitle),
+              subtitle: Text(l10n.medsScanLabelSubtitle),
               onTap: () {
                 Navigator.pop(context);
                 this.context.go('/scan');
@@ -503,8 +496,8 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
             ),
             ListTile(
               leading: Icon(Icons.edit_outlined, color: Palette.brand),
-              title: const Text('Enter manually'),
-              subtitle: const Text('Type the medication details yourself.'),
+              title: Text(l10n.medsEnterManuallyTitle),
+              subtitle: Text(l10n.medsEnterManuallySubtitle),
               onTap: () {
                 Navigator.pop(context);
                 this.context.push('/medication/new');
@@ -518,42 +511,22 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ScreenScaffold(
       onRefresh: load,
+      title: l10n.medsTitle,
+      subtitle: l10n.medsSubtitle,
+      trailing: GradientButton(label: l10n.commonAdd, onPressed: addSheet, height: 40),
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Medications', style: Theme.of(context).textTheme.headlineMedium),
-                  const Text('Everything you have confirmed and saved in MedGuard.'),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            FilledButton(
-              onPressed: addSheet,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(64, 40),
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: const Text('Add'),
-            ),
-          ],
-        ),
         if (!loading && error == null && items.isNotEmpty) ...[
           Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: search,
-                  decoration: const InputDecoration(
-                    hintText: 'Search medications',
-                    prefixIcon: Icon(Icons.search),
+                  decoration: InputDecoration(
+                    hintText: l10n.medsSearchHint,
+                    prefixIcon: const Icon(Icons.search),
                   ),
                 ),
               ),
@@ -562,11 +535,11 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                 initialValue: sort,
                 onSelected: (value) => setState(() => sort = value),
                 icon: const Icon(Icons.sort),
-                itemBuilder: (context) => const [
-                  PopupMenuItem(value: _MedicationSort.nameAsc, child: Text('Name A–Z')),
-                  PopupMenuItem(value: _MedicationSort.verifiedFirst, child: Text('Verified first')),
-                  PopupMenuItem(value: _MedicationSort.mostReminders, child: Text('Most reminders')),
-                  PopupMenuItem(value: _MedicationSort.recentlyAdded, child: Text('Recently added')),
+                itemBuilder: (context) => [
+                  PopupMenuItem(value: _MedicationSort.nameAsc, child: Text(l10n.medsSortNameAsc)),
+                  PopupMenuItem(value: _MedicationSort.verifiedFirst, child: Text(l10n.medsSortVerifiedFirst)),
+                  PopupMenuItem(value: _MedicationSort.mostReminders, child: Text(l10n.medsSortMostReminders)),
+                  PopupMenuItem(value: _MedicationSort.recentlyAdded, child: Text(l10n.medsSortRecentlyAdded)),
                 ],
               ),
             ],
@@ -580,15 +553,15 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
         else if (items.isEmpty)
           EmptyState(
             icon: Icons.medical_services_outlined,
-            title: 'No medications yet',
-            description: 'Scan a label or add the details manually. Nothing is saved until you confirm it.',
-            action: PrimaryButton(label: 'Scan a medication', onPressed: () => context.go('/scan')),
+            title: l10n.medsEmptyTitle,
+            description: l10n.medsEmptyDescription,
+            action: PrimaryButton(label: l10n.medsScanAMedication, onPressed: () => context.go('/scan')),
           )
         else if (_visible.isEmpty)
           EmptyState(
             icon: Icons.search_off,
-            title: 'No matches',
-            description: 'No medication matches "${search.text.trim()}".',
+            title: l10n.medsNoMatchesTitle,
+            description: l10n.medsNoMatchesDescription(search.text.trim()),
           )
         else
           ..._visible.map(
@@ -613,7 +586,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                               children: [
                                 Text(med.displayName, style: Theme.of(context).textTheme.titleMedium),
                                 Text(
-                                  med.ingredients.map((i) => i.normalizedName).join(', ').ifEmpty('No active ingredients recorded'),
+                                  med.ingredients.map((i) => i.normalizedName).join(', ').ifEmpty(l10n.commonNoIngredientsShort),
                                 ),
                               ],
                             ),
@@ -627,15 +600,13 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                         runSpacing: 8,
                         children: [
                           AppBadge(
-                            label: med.isVerified ? 'Verified' : 'Unverified',
+                            label: med.isVerified ? l10n.commonVerified : l10n.commonUnverified,
                             tone: verificationTone(med.verificationStatus),
                             glyph: verificationGlyph(med.verificationStatus),
                           ),
                           if (med.strength != null) AppBadge(label: med.strength!, tone: Tone.neutral),
                           AppBadge(
-                            label: med.activeScheduleCount == 0
-                                ? 'No reminders'
-                                : '${med.activeScheduleCount} reminder${med.activeScheduleCount == 1 ? '' : 's'}',
+                            label: l10n.medsReminderCount(med.activeScheduleCount),
                             tone: med.activeScheduleCount == 0 ? Tone.neutral : Tone.info,
                             glyph: '⏰',
                           ),
@@ -715,12 +686,13 @@ class _SafetyScreenState extends State<SafetyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final data = analysis;
     return ScreenScaffold(
       onRefresh: load,
+      title: l10n.safetyTitle,
+      subtitle: l10n.safetySubtitle,
       children: [
-        Text('Safety', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Deterministic checks across the medications saved in MedGuard.'),
         if (loading)
           const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
         else if (error != null)
@@ -728,19 +700,18 @@ class _SafetyScreenState extends State<SafetyScreen> {
         else if (data != null) ...[
           SafetySummaryCard(analysis: data),
           if (data.findings.isEmpty)
-            const Callout(
+            Callout(
               tone: Tone.info,
-              title: 'Unknown does not mean safe',
-              message:
-                  'MedGuard can only report what its current checks and data sources cover. Always read the label and ask a pharmacist if something is unclear.',
+              title: l10n.safetyUnknownTitle,
+              message: l10n.safetyUnknownMessage,
             )
           else
             ...data.findings.map((f) => Padding(padding: const EdgeInsets.only(bottom: 12), child: FindingCard(finding: f))),
           SafetyChecksCard(analysis: data),
         ],
         if (actionError != null) Text(actionError!, style: TextStyle(color: Palette.critical)),
-        PrimaryButton(label: 'Run the checks again', loading: running, onPressed: recheck),
-        SecondaryButton(label: 'View medications', onPressed: () => context.go('/medications')),
+        PrimaryButton(label: l10n.safetyRunChecksAgain, loading: running, onPressed: recheck),
+        SecondaryButton(label: l10n.safetyViewMedications, onPressed: () => context.go('/medications')),
       ],
     );
   }
@@ -751,18 +722,19 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(authProvider).user;
     return ScreenScaffold(
+      title: l10n.profileTitle,
+      subtitle: l10n.profileSubtitle,
       children: [
-        Text('Profile', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Your account, health details and app settings.'),
         AppCard(
           child: Row(
             children: [
               CircleAvatar(
                 radius: 28,
                 backgroundColor: Palette.brandSoft,
-                child: Text(initials(user?.displayName ?? 'MG'), style: TextStyle(color: Palette.brand, fontWeight: FontWeight.w700)),
+                child: Text(initials(user?.displayName ?? 'WW'), style: TextStyle(color: Palette.brand, fontWeight: FontWeight.w700)),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -773,7 +745,7 @@ class ProfileScreen extends ConsumerWidget {
                     Text(user?.email ?? '', style: Theme.of(context).textTheme.labelSmall),
                     if (user?.isDemoAccount == true) ...[
                       const SizedBox(height: 6),
-                      const AppBadge(label: 'Demo account', tone: Tone.info, glyph: 'i'),
+                      AppBadge(label: l10n.profileDemoAccountBadge, tone: Tone.info, glyph: 'i'),
                     ],
                   ],
                 ),
@@ -785,11 +757,11 @@ class ProfileScreen extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             children: [
-              ListRow(icon: Icons.person_outline, label: 'Personal Information', onTap: () => context.push('/personal-info')),
-              ListRow(icon: Icons.favorite_border, label: 'Health Information', onTap: () => context.push('/health-info')),
-              ListRow(icon: Icons.settings_outlined, label: 'App Settings', onTap: () => context.push('/app-settings')),
-              ListRow(icon: Icons.notifications_outlined, label: 'Notifications', onTap: () => context.push('/notification-settings')),
-              ListRow(icon: Icons.lock_outline, label: 'Privacy', divider: false, onTap: () => context.push('/privacy-settings')),
+              ListRow(icon: Icons.person_outline, label: l10n.profilePersonalInformation, onTap: () => context.push('/personal-info')),
+              ListRow(icon: Icons.favorite_border, label: l10n.profileHealthInformation, onTap: () => context.push('/health-info')),
+              ListRow(icon: Icons.settings_outlined, label: l10n.profileAppSettings, onTap: () => context.push('/app-settings')),
+              ListRow(icon: Icons.notifications_outlined, label: l10n.profileNotifications, onTap: () => context.push('/notification-settings')),
+              ListRow(icon: Icons.lock_outline, label: l10n.profilePrivacy, divider: false, onTap: () => context.push('/privacy-settings')),
             ],
           ),
         ),
@@ -797,24 +769,24 @@ class ProfileScreen extends ConsumerWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             children: [
-              ListRow(icon: Icons.qr_code, label: 'Emergency card', onTap: () => context.push('/emergency')),
-              ListRow(icon: Icons.people_outline, label: 'Share access', onTap: () => context.push('/caregivers')),
-              ListRow(icon: Icons.diversity_1_outlined, label: 'Shared with you', onTap: () => context.push('/shared-with-me')),
-              ListRow(icon: Icons.calendar_today_outlined, label: 'Dose history', divider: false, onTap: () => context.push('/history')),
+              ListRow(icon: Icons.qr_code, label: l10n.profileEmergencyCard, onTap: () => context.push('/emergency')),
+              ListRow(icon: Icons.people_outline, label: l10n.profileShareAccess, onTap: () => context.push('/caregivers')),
+              ListRow(icon: Icons.diversity_1_outlined, label: l10n.profileSharedWithYou, onTap: () => context.push('/shared-with-me')),
+              ListRow(icon: Icons.calendar_today_outlined, label: l10n.profileDoseHistory, divider: false, onTap: () => context.push('/history')),
             ],
           ),
         ),
         SecondaryButton(
-          label: 'Sign out',
+          label: l10n.profileSignOut,
           onPressed: () async {
             final ok = await showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('Sign out?'),
-                content: const Text('Your medication information stays on the server and is removed from this device.'),
+                title: Text(l10n.profileSignOutDialogTitle),
+                content: Text(l10n.profileSignOutDialogMessage),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Stay signed in')),
-                  TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Sign out')),
+                  TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.profileStaySignedIn)),
+                  TextButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.profileSignOut)),
                 ],
               ),
             );

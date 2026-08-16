@@ -11,7 +11,7 @@ namespace MedGuard.Application.Ai;
 public static class ExplanationPrompt
 {
     public const string SystemPrompt = """
-        You are the explanation layer of MedGuard, a medication safety application.
+        You are the explanation layer of WellWell, a medication safety application.
 
         You do not make medication decisions.
 

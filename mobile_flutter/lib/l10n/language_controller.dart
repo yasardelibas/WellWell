@@ -1,3 +1,5 @@
+import 'dart:ui' show PlatformDispatcher;
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -42,6 +44,14 @@ class AppLanguage {
     final explicit = localeNotifier.value;
     if (explicit != null) return explicit.languageCode;
     final deviceCode = View.of(context).platformDispatcher.locale.languageCode;
+    return deviceCode == 'tr' ? 'tr' : 'en';
+  }
+
+  /// Context-free equivalent of [wireLanguageFor], for code that runs without a
+  /// BuildContext (date formatting, API error mapping, scheduled local notifications).
+  static String get currentCode {
+    final explicit = localeNotifier.value;
+    final deviceCode = explicit?.languageCode ?? PlatformDispatcher.instance.locale.languageCode;
     return deviceCode == 'tr' ? 'tr' : 'en';
   }
 }

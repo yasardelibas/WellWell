@@ -17,15 +17,24 @@ class Palette {
   static Color get inkMuted => _dark ? const Color(0xFFB4BAC9) : const Color(0xFF6B7280);
   static Color get inkSubtle => _dark ? const Color(0xFF7C8494) : const Color(0xFF9CA3AF);
   static Color get line => _dark ? const Color(0xFF2A3244) : const Color(0xFFE5E7EB);
-  static Color get brand => const Color(0xFF2E63EB);
-  static Color get brandDark => const Color(0xFF1E4ED8);
-  static Color get brandSoft => _dark ? const Color(0xFF1B2A4D) : const Color(0xFFEBF1FF);
+  // Aligned with the WellWell logo's blue so every blue accent (buttons, time
+  // labels, links, dots) matches the Scan CTA gradient across the app.
+  static Color get brand => logoBlue;
+  static Color get brandDark => const Color(0xFF1683C9);
+  static Color get brandSoft => _dark ? const Color(0xFF0E2E44) : const Color(0xFFE4F4FD);
   static Color get teal => const Color(0xFF14B8A6);
   static Color get safe => _dark ? const Color(0xFF34D399) : const Color(0xFF10B981);
   static Color get attention => _dark ? const Color(0xFFFBBF24) : const Color(0xFFF59E0B);
   static Color get critical => _dark ? const Color(0xFFF87171) : const Color(0xFFEF4444);
 
-  static List<Color> get hero => const [Color(0xFF2E63EB), Color(0xFF14B8A6)];
+  // Sampled from the WellWell logo: emerald-green (top-left) flowing into sky-blue
+  // (bottom-right). Used for primary buttons and hero surfaces so the app's main
+  // call-to-action matches the mark.
+  static const Color logoGreen = Color(0xFF23C6A0);
+  static const Color logoBlue = Color(0xFF1E9FE8);
+  static List<Color> get brandGradient => const [logoGreen, logoBlue];
+
+  static List<Color> get hero => const [logoGreen, logoBlue];
 }
 
 enum Tone { neutral, info, safe, attention, critical }
@@ -53,8 +62,8 @@ Map<Tone, ToneStyle> get toneStyles => {
       ),
       Tone.info: ToneStyle(
         background: Palette.brandSoft,
-        border: Palette._dark ? const Color(0x4D2E63EB) : const Color(0xFFD6E4FF),
-        foreground: Palette._dark ? const Color(0xFF93B4FF) : const Color(0xFF1E40AF),
+        border: Palette._dark ? const Color(0x4D1E9FE8) : const Color(0xFFC7E6FB),
+        foreground: Palette._dark ? const Color(0xFF8FD1F7) : const Color(0xFF1670B8),
         glyph: 'i',
       ),
       Tone.safe: ToneStyle(

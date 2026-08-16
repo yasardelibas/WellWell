@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'dart:ui' show PlatformDispatcher;
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 
@@ -18,7 +18,7 @@ class ApiException implements Exception {
 }
 
 class NetworkException implements Exception {
-  NetworkException([this.message = "We couldn't reach MedGuard. Check your connection and try again."]);
+  NetworkException([this.message = "We couldn't reach WellWell. Check your connection and try again."]);
   final String message;
 
   @override
@@ -40,10 +40,24 @@ const _errorMessagesByCodeTr = {
   'invitation_expired': 'Bu davet artık geçerli değil.',
   'invitation_mismatch': 'Bu davet farklı bir e-posta adresine gönderilmişti.',
   'caregiver_not_found': 'Bu kişi hesabınıza bağlı bir bakıcı değil.',
+  'card_not_available': 'Bu acil durum kartı kullanılamıyor.',
+  'demo_disabled': 'Demo hesabı şu anda kullanılamıyor.',
+  'dose_not_found': 'Bu doz artık mevcut değil.',
+  'image_too_large': 'Çekilen görüntü çok büyük. Lütfen tekrar deneyin.',
+  'incorrect_code': 'Bu kod doğru değil.',
+  'invalid_caregiver': 'Kendinizi bakıcı olarak davet edemezsiniz.',
+  'invalid_image': 'Çekilen görüntü okunamadı.',
+  'invalid_or_expired_code': 'Yeni bir kod isteyip tekrar deneyin.',
+  'invalid_range': 'Başlangıç tarihi bitiş tarihinden önce olmalı.',
+  'invalid_reset_token': 'Bu sıfırlama bağlantısı artık geçerli değil.',
+  'nothing_to_read': 'Bir görüntü veya etiket metni girin.',
+  'permission_denied': 'Bu bilgiye erişiminiz yok.',
+  'scan_already_handled': 'Bu tarama zaten onaylandı veya reddedildi.',
+  'scan_not_found': 'Bu tarama artık mevcut değil. Lütfen tekrar tarayın.',
+  'schedule_not_found': 'Bu hatırlatma artık mevcut değil.',
 };
 
-String _currentLanguageCode() =>
-    AppLanguage.localeNotifier.value?.languageCode ?? PlatformDispatcher.instance.locale.languageCode;
+String _currentLanguageCode() => AppLanguage.currentCode;
 
 String describeError(Object error) {
   if (error is ApiException) {
@@ -55,10 +69,84 @@ String describeError(Object error) {
   }
   if (error is NetworkException) {
     return _currentLanguageCode() == 'tr'
-        ? "MedGuard'a ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin."
+        ? "WellWell'e ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin."
         : error.toString();
   }
   return _currentLanguageCode() == 'tr' ? 'Bir şeyler ters gitti. Lütfen tekrar deneyin.' : 'Something went wrong. Please try again.';
+}
+
+/// Dio equivalent of a Polly retry policy. Only idempotent GET requests are
+/// retried, and only for transient failures (cold connection errors, timeouts,
+/// dropped sockets, 429, and 500/502/503/504 — all common while the backend and
+/// its reverse proxy warm up on the first request after an idle period).
+/// Non-idempotent writes and real client/auth errors (e.g. 400/401/404) are
+/// never retried.
+class _RetryInterceptor extends Interceptor {
+  _RetryInterceptor(this._dio);
+
+  final Dio _dio;
+  static const _maxRetries = 4;
+
+  @override
+  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
+    final options = err.requestOptions;
+    final attempt = (options.extra['retry_attempt'] as int?) ?? 0;
+
+    if (!_shouldRetry(err) || attempt >= _maxRetries) {
+      return handler.next(err);
+    }
+
+    final next = attempt + 1;
+    await Future<void>.delayed(_backoff(next, err));
+    if (options.extra['retry_attempt'] == null) {
+      // Fresh copy of extra so the counter travels with the retried request.
+      options.extra = Map<String, dynamic>.from(options.extra);
+    }
+    options.extra['retry_attempt'] = next;
+
+    try {
+      final response = await _dio.fetch<dynamic>(options);
+      return handler.resolve(response);
+    } on DioException catch (e) {
+      return handler.next(e);
+    }
+  }
+
+  bool _shouldRetry(DioException err) {
+    if (err.requestOptions.method.toUpperCase() != 'GET') return false;
+    switch (err.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.connectionError:
+        return true;
+      case DioExceptionType.unknown:
+        // Sockets dropped mid-handshake during a cold start surface here (often
+        // wrapping a SocketException/HandshakeException) with no HTTP response.
+        return err.response == null;
+      case DioExceptionType.badResponse:
+        final status = err.response?.statusCode ?? 0;
+        return status == 429 || status == 500 || status == 502 || status == 503 || status == 504;
+      default:
+        return false;
+    }
+  }
+
+  Duration _backoff(int attempt, DioException err) {
+    // Honour a server-provided Retry-After (seconds) for 429s when present.
+    final retryAfter = err.response?.headers.value('retry-after');
+    if (retryAfter != null) {
+      final seconds = int.tryParse(retryAfter.trim());
+      if (seconds != null) {
+        return Duration(milliseconds: (seconds.clamp(0, 10)) * 1000);
+      }
+    }
+    // Exponential backoff: ~400ms, 800ms, 1600ms, 3200ms, plus jitter to avoid
+    // synchronized retries when several GETs fail together on a cold start.
+    final base = 400 * (1 << (attempt - 1));
+    final jitter = Random().nextInt(250);
+    return Duration(milliseconds: base + jitter);
+  }
 }
 
 class ApiClient {
@@ -82,16 +170,21 @@ class ApiClient {
         onError: (error, handler) async {
           final status = error.response?.statusCode;
           final anonymous = error.requestOptions.extra['anonymous'] == true;
-          if (status == 401 && !anonymous && !_isRefreshing) {
+          final alreadyRetried = error.requestOptions.extra['auth_retried'] == true;
+          if (status == 401 && !anonymous && !alreadyRetried) {
+            // Concurrent 401s (e.g. the Home screen firing several GETs at once)
+            // all await the same refresh instead of racing; losers used to fall
+            // through and fail with "something went wrong" on the first load.
             final refreshed = await refreshTokens();
             if (refreshed) {
               final req = error.requestOptions;
+              req.extra = Map<String, dynamic>.from(req.extra)..['auth_retried'] = true;
               req.headers['Authorization'] = 'Bearer $_accessToken';
               try {
                 final retry = await _dio.fetch(req);
                 return handler.resolve(retry);
               } catch (e) {
-                return handler.next(error);
+                return handler.next(e is DioException ? e : error);
               }
             }
             await clearTokens();
@@ -101,6 +194,10 @@ class ApiClient {
         },
       ),
     );
+    // Resilience for flaky first requests (cold connections, transient 5xx/429).
+    // The .NET side uses Polly; this is the Dio-side equivalent: retry idempotent
+    // GETs a few times with exponential backoff + jitter before surfacing an error.
+    _dio.interceptors.add(_RetryInterceptor(_dio));
   }
 
   static const apiBaseUrl = String.fromEnvironment(
@@ -111,7 +208,7 @@ class ApiClient {
   late final Dio _dio;
   String? _accessToken;
   String? _refreshToken;
-  bool _isRefreshing = false;
+  Future<bool>? _refreshing;
   void Function()? onSessionExpired;
 
   Future<void> loadTokens() async {
@@ -133,10 +230,15 @@ class ApiClient {
     await SecureStore.delete(SecureStore.refreshToken);
   }
 
-  Future<bool> refreshTokens() async {
+  /// Dedupes concurrent refreshes: every caller awaits the same in-flight
+  /// refresh so a rotated refresh token is never spent twice in parallel.
+  Future<bool> refreshTokens() {
+    return _refreshing ??= _performRefresh().whenComplete(() => _refreshing = null);
+  }
+
+  Future<bool> _performRefresh() async {
     final current = _refreshToken;
     if (current == null) return false;
-    _isRefreshing = true;
     try {
       final response = await _dio.post(
         '/api/auth/refresh',
@@ -148,8 +250,6 @@ class ApiClient {
       return true;
     } catch (_) {
       return false;
-    } finally {
-      _isRefreshing = false;
     }
   }
 
@@ -267,6 +367,13 @@ class Api {
         '/api/auth/forgot-password',
         (_) {},
         body: {'email': email},
+        anonymous: true,
+      );
+
+  static Future<void> resetPassword(String token, String newPassword) => apiClient.post(
+        '/api/auth/reset-password',
+        (_) {},
+        body: {'token': token, 'newPassword': newPassword},
         anonymous: true,
       );
 

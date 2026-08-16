@@ -274,8 +274,12 @@ public static class CaregiverEndpoints
             .OrderBy(medication => medication.BrandName)
             .ToListAsync(cancellationToken);
 
-        return Results.Ok(medications.Select(medication => medication.ToResponse()).ToList());
+        var language = await GetLanguageAsync(dbContext, currentUser.RequireUserId(), cancellationToken);
+        return Results.Ok(medications.Select(medication => medication.ToResponse(language: language)).ToList());
     }
+
+    private static Task<string?> GetLanguageAsync(MedGuardDbContext dbContext, Guid userId, CancellationToken cancellationToken) =>
+        dbContext.Users.Where(user => user.Id == userId).Select(user => user.PreferredLanguage).FirstOrDefaultAsync(cancellationToken);
 
     private static async Task<IResult> GetSharedAdherenceAsync(
         Guid id,
@@ -309,12 +313,13 @@ public static class CaregiverEndpoints
             .OrderBy(dose => dose.ScheduledAt)
             .ToListAsync(cancellationToken);
 
+        var viewerLanguage = await GetLanguageAsync(dbContext, currentUser.RequireUserId(), cancellationToken);
         var days = doses
             .GroupBy(dose => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(dose.ScheduledAt, timeZone).DateTime))
             .OrderByDescending(group => group.Key)
             .Select(group => new AdherenceDayResponse(
                 group.Key,
-                group.Select(dose => dose.ToResponse(timeZone)).ToList()))
+                group.Select(dose => dose.ToResponse(timeZone, viewerLanguage)).ToList()))
             .ToList();
 
         return Results.Ok(new AdherenceHistoryResponse(

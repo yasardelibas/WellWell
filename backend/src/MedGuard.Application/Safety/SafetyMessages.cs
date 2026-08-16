@@ -31,37 +31,37 @@ public static class SafetyMessages
     private const string UnverifiedTitleTr = "Bağımsız olarak doğrulanmadı";
 
     private const string UnverifiedBodyEn =
-        "MedGuard could not match this medication against a trusted medication database, so its details " +
+        "WellWell could not match this medication against a trusted medication database, so its details " +
         "come from what was entered or read from the label. Please double-check the label.";
     private const string UnverifiedBodyTr =
-        "MedGuard bu ilacı güvenilir bir ilaç veritabanıyla eşleştiremedi, bu yüzden bilgiler girilen " +
+        "WellWell bu ilacı güvenilir bir ilaç veritabanıyla eşleştiremedi, bu yüzden bilgiler girilen " +
         "veya etiketten okunan verilere dayanıyor. Lütfen etiketi tekrar kontrol edin.";
 
     private const string InteractionUnavailableTitleEn = "Interaction checking is not available";
     private const string InteractionUnavailableTitleTr = "Etkileşim kontrolü kullanılamıyor";
 
     private const string InteractionUnavailableBodyEn =
-        "Interaction checking is not available for this medication. MedGuard has not checked for " +
+        "Interaction checking is not available for this medication. WellWell has not checked for " +
         "drug-drug interactions and this does not mean none exist.";
     private const string InteractionUnavailableBodyTr =
-        "Bu ilaç için etkileşim kontrolü kullanılamıyor. MedGuard ilaç-ilaç etkileşimlerini kontrol " +
+        "Bu ilaç için etkileşim kontrolü kullanılamıyor. WellWell ilaç-ilaç etkileşimlerini kontrol " +
         "etmedi; bu, herhangi bir etkileşim olmadığı anlamına gelmez.";
 
     private const string NoFindingsHeadlineEn = "No duplicate active ingredients detected";
     private const string NoFindingsHeadlineTr = "Tekrarlayan aktif madde tespit edilmedi";
 
     private const string NoFindingsSubtextEn =
-        "Based on the medications currently saved in MedGuard. This is not a confirmation that these medications are suitable together.";
+        "Based on the medications currently saved in WellWell. This is not a confirmation that these medications are suitable together.";
     private const string NoFindingsSubtextTr =
-        "MedGuard'da şu anda kayıtlı olan ilaçlara dayanmaktadır. Bu, ilaçların birlikte kullanıma uygun olduğunun onayı değildir.";
+        "WellWell'de şu anda kayıtlı olan ilaçlara dayanmaktadır. Bu, ilaçların birlikte kullanıma uygun olduğunun onayı değildir.";
 
     private const string AttentionHeadlineEn = "Some details need your attention";
     private const string AttentionHeadlineTr = "Bazı ayrıntılar dikkatinizi gerektiriyor";
 
     private const string AttentionSubtextEn =
-        "MedGuard could not complete every check, or some medications are unverified. Unknown does not mean safe.";
+        "WellWell could not complete every check, or some medications are unverified. Unknown does not mean safe.";
     private const string AttentionSubtextTr =
-        "MedGuard tüm kontrolleri tamamlayamadı veya bazı ilaçlar doğrulanmadı. Bilinmiyor olması güvenli anlamına gelmez.";
+        "WellWell tüm kontrolleri tamamlayamadı veya bazı ilaçlar doğrulanmadı. Bilinmiyor olması güvenli anlamına gelmez.";
 
     private const string WarningHeadlineEn = "Possible duplicate ingredient detected";
     private const string WarningHeadlineTr = "Olası tekrarlayan aktif madde tespit edildi";
@@ -75,14 +75,14 @@ public static class SafetyMessages
     private const string HighHeadlineTr = "Lütfen bunu bir sağlık uzmanıyla gözden geçirin";
 
     private const string HighSubtextEn =
-        "MedGuard found something that needs attention before your next dose. Follow your medication label.";
+        "WellWell found something that needs attention before your next dose. Follow your medication label.";
     private const string HighSubtextTr =
-        "MedGuard bir sonraki dozunuzdan önce dikkat gerektiren bir şey buldu. İlaç etiketinizi takip edin.";
+        "WellWell bir sonraki dozunuzdan önce dikkat gerektiren bir şey buldu. İlaç etiketinizi takip edin.";
 
     private const string GeneralDisclaimerEn =
-        "MedGuard does not provide medical advice, diagnoses or dosage instructions. Always follow your medication label and your healthcare professional.";
+        "WellWell does not provide medical advice, diagnoses or dosage instructions. Always follow your medication label and your healthcare professional.";
     private const string GeneralDisclaimerTr =
-        "MedGuard tıbbi tavsiye, teşhis veya doz talimatı sunmaz. Her zaman ilaç etiketinizi ve sağlık uzmanınızı takip edin.";
+        "WellWell tıbbi tavsiye, teşhis veya doz talimatı sunmaz. Her zaman ilaç etiketinizi ve sağlık uzmanınızı takip edin.";
 
     private static bool IsTurkish(string? language) => string.Equals(language, "tr", StringComparison.OrdinalIgnoreCase);
 

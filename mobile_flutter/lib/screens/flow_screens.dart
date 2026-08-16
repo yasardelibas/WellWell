@@ -6,6 +6,7 @@ import '../l10n/generated/app_localizations.dart';
 import '../services/api.dart';
 import '../state/auth.dart';
 import '../theme/palette.dart';
+import '../widgets/brand_wave.dart';
 import '../widgets/ui.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -25,6 +26,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isHero = step == 0;
     final body = SafeArea(
       child: Padding(
@@ -61,28 +63,47 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       child: FilledButton(
                         style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Palette.brand),
                         onPressed: () => setState(() => step++),
-                        child: const Text('Get Started'),
+                        child: Text(l10n.onboardingGetStarted),
                       ),
                     )
-                  : PrimaryButton(label: 'Next', onPressed: () => setState(() => step++))
+                  : PrimaryButton(label: l10n.commonNext, onPressed: () => setState(() => step++))
             else
-              PrimaryButton(label: 'I understand', onPressed: finish),
+              PrimaryButton(label: l10n.commonIUnderstand, onPressed: finish),
             if (step < 2)
               TextButton(
                 onPressed: () => setState(() => step = 2),
-                child: Text('Skip', style: TextStyle(color: isHero ? Colors.white : Palette.brand)),
+                child: Text(l10n.onboardingSkip, style: TextStyle(color: isHero ? Colors.white : Palette.brand)),
               ),
           ],
         ),
       ),
     );
 
-    if (!isHero) return Scaffold(backgroundColor: Palette.canvas, body: body);
+    if (!isHero) {
+      return Scaffold(
+        backgroundColor: Palette.canvas,
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: BrandWaves(color: Palette.teal, opacity: 0.07),
+            ),
+            body,
+          ],
+        ),
+      );
+    }
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: Palette.hero, begin: Alignment.topLeft, end: Alignment.bottomRight),
       ),
-      child: Scaffold(backgroundColor: Colors.transparent, body: body),
+      child: Stack(
+        children: [
+          const Positioned.fill(
+            child: BrandWaves(color: Colors.white, opacity: 0.12, anchor: WaveAnchor.both),
+          ),
+          Scaffold(backgroundColor: Colors.transparent, body: body),
+        ],
+      ),
     );
   }
 }
@@ -92,19 +113,20 @@ class _Welcome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        LogoMark(size: 96, onDark: true),
-        SizedBox(height: 16),
-        Text('MEDGUARD', style: TextStyle(color: Colors.white70, letterSpacing: 4, fontSize: 12)),
-        SizedBox(height: 12),
-        Text('Scan. Understand.\nStay safer.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700)),
-        SizedBox(height: 16),
+        const LogoMark(size: 96, onDark: true),
+        const SizedBox(height: 16),
+        const Text('WELLWELL', style: TextStyle(color: Colors.white70, letterSpacing: 4, fontSize: 12)),
+        const SizedBox(height: 12),
+        Text(l10n.onboardingHeroTitle, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 16),
         Text(
-          "Your smart medication companion. Scan your medicines, understand what you're taking, and keep your routine organised.",
+          l10n.onboardingHeroDescription,
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
+          style: const TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
         ),
       ],
     );
@@ -116,21 +138,22 @@ class _Capabilities extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const items = [
-      (Icons.schedule, 'organise medication schedules'),
-      (Icons.science_outlined, 'identify active ingredients'),
-      (Icons.copy_outlined, 'detect possible duplicate ingredients'),
-      (Icons.done_all, 'remember doses'),
-      (Icons.qr_code, 'securely share emergency medication information'),
+    final l10n = AppLocalizations.of(context)!;
+    final items = [
+      (Icons.schedule, l10n.onboardingCapSchedules),
+      (Icons.science_outlined, l10n.onboardingCapIngredients),
+      (Icons.copy_outlined, l10n.onboardingCapDuplicates),
+      (Icons.done_all, l10n.onboardingCapDoses),
+      (Icons.qr_code, l10n.onboardingCapEmergency),
     ];
     return ListView(
       children: [
         Image.asset('assets/illustrations/onboarding-all-in-one-place.png', height: 180),
         const SizedBox(height: 16),
-        Text('All in one place', textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineMedium),
+        Text(l10n.onboardingAllInOnePlace, textAlign: TextAlign.center, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 8),
-        const Text(
-          'Schedules, ingredients, reminders and emergency information — organised around the medications you already take.',
+        Text(
+          l10n.onboardingAllInOnePlaceDesc,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
@@ -155,20 +178,18 @@ class _Safety extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       children: [
-        Text('Before you start', style: Theme.of(context).textTheme.headlineMedium),
+        Text(l10n.onboardingBeforeYouStart, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 16),
-        const Callout(
+        Callout(
           tone: Tone.attention,
-          title: 'MedGuard is not a diagnosis tool',
-          message:
-              'MedGuard does not provide medical diagnoses or change medication instructions. Always follow your medication label and advice from your healthcare professional.',
+          title: l10n.onboardingNotDiagnosisTitle,
+          message: l10n.onboardingNotDiagnosisMessage,
         ),
         const SizedBox(height: 16),
-        const Text(
-          'Warnings are produced by deterministic checks against trusted medication data. Explanations written in plain language never add new findings of their own.',
-        ),
+        Text(l10n.onboardingWarningsExplanation),
       ],
     );
   }
@@ -183,8 +204,8 @@ class AuthScreen extends ConsumerStatefulWidget {
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool signIn = true;
-  bool loading = false;
   bool demoLoading = false;
+  bool submitLoading = false;
   String? error;
   final email = TextEditingController();
   final password = TextEditingController();
@@ -199,8 +220,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   Future<void> submit() async {
+    final l10n = AppLocalizations.of(context)!;
+    if (email.text.trim().isEmpty || password.text.trim().isEmpty || (!signIn && name.text.trim().isEmpty)) {
+      setState(() => error = l10n.authFieldsRequired);
+      return;
+    }
     setState(() {
-      loading = true;
+      submitLoading = true;
       error = null;
     });
     try {
@@ -216,7 +242,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     } catch (e) {
       setState(() => error = describeError(e));
     } finally {
-      if (mounted) setState(() => loading = false);
+      if (mounted) setState(() => submitLoading = false);
     }
   }
 
@@ -238,13 +264,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Widget build(BuildContext context) {
     final expired = ref.watch(authProvider).sessionExpired;
     return Scaffold(
-      body: SafeArea(
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: BrandWaves(color: Palette.teal, opacity: 0.07),
+          ),
+          SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(28, 24, 28, 32),
           children: [
             const LogoMark(size: 64),
             const SizedBox(height: 8),
-            Text('MEDGUARD', textAlign: TextAlign.center, style: TextStyle(letterSpacing: 3, color: Palette.inkSubtle, fontSize: 12)),
+            Text('WELLWELL', textAlign: TextAlign.center, style: TextStyle(letterSpacing: 3, color: Palette.inkSubtle, fontSize: 12)),
             const SizedBox(height: 12),
             Text(
               signIn ? AppLocalizations.of(context)!.authWelcomeBack : AppLocalizations.of(context)!.authCreateAccount,
@@ -257,25 +288,25 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
-            SegmentedAuth(signIn: signIn, onChanged: (v) => setState(() => signIn = v)),
+            SegmentedAuth(signIn: signIn, onChanged: (v) => setState(() { signIn = v; error = null; })),
             const SizedBox(height: 20),
             if (expired) Text(AppLocalizations.of(context)!.authSessionExpired, style: TextStyle(color: Palette.attention)),
             if (!signIn) ...[
-              LabeledField(label: AppLocalizations.of(context)!.authName, controller: name, hint: 'How should we greet you?'),
+              LabeledField(label: AppLocalizations.of(context)!.authName, controller: name, hint: AppLocalizations.of(context)!.authNameHint),
               const SizedBox(height: 12),
             ],
             LabeledField(
               label: AppLocalizations.of(context)!.authEmail,
               controller: email,
               keyboardType: TextInputType.emailAddress,
-              hint: 'you@example.com',
+              hint: AppLocalizations.of(context)!.authEmailHint,
             ),
             const SizedBox(height: 12),
             LabeledField(
               label: AppLocalizations.of(context)!.authPassword,
               controller: password,
               obscure: true,
-              hint: signIn ? 'Your password' : 'Create a password',
+              hint: signIn ? AppLocalizations.of(context)!.authPasswordHintSignIn : AppLocalizations.of(context)!.authPasswordHintSignUp,
             ),
             if (signIn)
               Align(
@@ -288,23 +319,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
             const SizedBox(height: 8),
             if (!signIn) ...[
-              const Callout(
-                title: 'What MedGuard does not do',
-                message: 'MedGuard never diagnoses conditions or changes the instructions on your medication label.',
+              Callout(
+                title: AppLocalizations.of(context)!.authWhatWellWellDoesNotTitle,
+                message: AppLocalizations.of(context)!.authWhatWellWellDoesNotMessage,
               ),
               const SizedBox(height: 12),
             ],
             PrimaryButton(
               label: signIn ? AppLocalizations.of(context)!.commonSignIn : AppLocalizations.of(context)!.commonSignUp,
-              loading: loading,
+              loading: submitLoading,
               onPressed: submit,
             ),
-            if (signIn) ...[
-              const SizedBox(height: 12),
-              SecondaryButton(label: AppLocalizations.of(context)!.authUseDemoAccount, loading: demoLoading, onPressed: demo),
-            ],
+            const SizedBox(height: 12),
+            SecondaryButton(label: AppLocalizations.of(context)!.authUseDemoAccount, loading: demoLoading, onPressed: demo),
           ],
         ),
+          ),
+        ],
       ),
     );
   }
@@ -319,12 +350,46 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final email = TextEditingController();
+  final resetToken = TextEditingController();
+  final newPassword = TextEditingController();
   bool sent = false;
+  bool reset = false;
   bool loading = false;
+  bool resetLoading = false;
   String? error;
+  String? resetError;
+
+  @override
+  void dispose() {
+    email.dispose();
+    resetToken.dispose();
+    newPassword.dispose();
+    super.dispose();
+  }
+
+  Future<void> _completeReset(AppLocalizations l10n) async {
+    if (resetToken.text.trim().isEmpty || newPassword.text.trim().isEmpty) {
+      setState(() => resetError = l10n.authFieldsRequired);
+      return;
+    }
+    setState(() {
+      resetLoading = true;
+      resetError = null;
+    });
+    try {
+      await Api.resetPassword(resetToken.text.trim(), newPassword.text.trim());
+      if (!mounted) return;
+      setState(() => reset = true);
+    } catch (e) {
+      setState(() => resetError = describeError(e));
+    } finally {
+      if (mounted) setState(() => resetLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -334,18 +399,33 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             children: [
               const BackCircle(),
               const SizedBox(height: 16),
-              Text('Reset your password', style: Theme.of(context).textTheme.headlineMedium),
+              Text(l10n.forgotPasswordTitle, style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 8),
-              const Text("Enter your email address and we'll send a reset link if an account exists."),
+              Text(l10n.forgotPasswordSubtitle),
               const SizedBox(height: 20),
-              if (sent)
-                const Callout(tone: Tone.safe, title: 'Check your email', message: 'If an account exists for that address, a reset link is on its way.')
-              else ...[
-                LabeledField(label: 'Email', controller: email, keyboardType: TextInputType.emailAddress),
+              if (reset) ...[
+                Callout(tone: Tone.safe, title: l10n.forgotPasswordResetDoneTitle, message: l10n.forgotPasswordResetDoneMessage),
+                const SizedBox(height: 16),
+                PrimaryButton(label: l10n.forgotPasswordBackToSignIn, onPressed: () => context.go('/auth')),
+              ] else if (sent) ...[
+                Callout(tone: Tone.safe, title: l10n.forgotPasswordCheckEmailTitle, message: l10n.forgotPasswordCheckEmailMessage),
+                const SizedBox(height: 20),
+                LabeledField(label: l10n.forgotPasswordCodeLabel, controller: resetToken, hint: l10n.forgotPasswordCodeHint, maxLines: 2),
+                const SizedBox(height: 12),
+                LabeledField(label: l10n.forgotPasswordNewPasswordLabel, controller: newPassword, obscure: true),
+                if (resetError != null) Text(resetError!, style: TextStyle(color: Palette.critical)),
+                const SizedBox(height: 16),
+                PrimaryButton(
+                  label: l10n.forgotPasswordResetButton,
+                  loading: resetLoading,
+                  onPressed: () => _completeReset(l10n),
+                ),
+              ] else ...[
+                LabeledField(label: l10n.authEmail, controller: email, keyboardType: TextInputType.emailAddress),
                 if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
                 const SizedBox(height: 16),
                 PrimaryButton(
-                  label: 'Send reset link',
+                  label: l10n.forgotPasswordSendButton,
                   loading: loading,
                   onPressed: () async {
                     setState(() => loading = true);
@@ -398,6 +478,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final email = ref.watch(authProvider).user?.email ?? '';
     return Scaffold(
       body: SafeArea(
@@ -407,9 +488,9 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
             children: [
               Image.asset('assets/illustrations/verify-email.png', height: 160),
               const SizedBox(height: 16),
-              Text('Verify your email', style: Theme.of(context).textTheme.headlineMedium),
+              Text(l10n.verifyEmailTitle, style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 8),
-              Text("We've sent a 6-digit code to\n$email", textAlign: TextAlign.center),
+              Text(l10n.verifyEmailSentTo(email), textAlign: TextAlign.center),
               const SizedBox(height: 20),
               TextField(
                 controller: controller,
@@ -422,7 +503,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
               const SizedBox(height: 16),
               PrimaryButton(
-                label: 'Verify',
+                label: l10n.verifyEmailVerifyButton,
                 loading: loading,
                 onPressed: () async {
                   setState(() => loading = true);
@@ -437,7 +518,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               ),
               const SizedBox(height: 8),
               SecondaryButton(
-                label: cooldown > 0 ? 'Resend code in 0:${cooldown.toString().padLeft(2, '0')}' : 'Resend code',
+                label: cooldown > 0 ? l10n.verifyEmailResendCooldown(cooldown.toString().padLeft(2, '0')) : l10n.verifyEmailResendButton,
                 onPressed: cooldown > 0
                     ? null
                     : () async {
@@ -446,7 +527,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                         _tick();
                       },
               ),
-              TextButton(onPressed: () => ref.read(authProvider.notifier).signOut(), child: const Text('Sign out')),
+              TextButton(onPressed: () => ref.read(authProvider.notifier).signOut(), child: Text(l10n.profileSignOut)),
             ],
           ),
         ),
@@ -468,6 +549,7 @@ class _SafetyNoticeScreenState extends ConsumerState<SafetyNoticeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -475,18 +557,17 @@ class _SafetyNoticeScreenState extends ConsumerState<SafetyNoticeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('How MedGuard works', style: Theme.of(context).textTheme.headlineMedium),
+              Text(l10n.safetyNoticeTitle, style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 16),
-              const Callout(
+              Callout(
                 tone: Tone.attention,
-                title: 'Please read before continuing',
-                message:
-                    'MedGuard does not provide medical diagnoses or change medication instructions. Always follow your medication label and advice from your healthcare professional.',
+                title: l10n.safetyNoticeReadTitle,
+                message: l10n.onboardingNotDiagnosisMessage,
               ),
               const Spacer(),
               if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
               PrimaryButton(
-                label: 'I understand',
+                label: l10n.commonIUnderstand,
                 loading: loading,
                 onPressed: () async {
                   setState(() => loading = true);
@@ -499,7 +580,7 @@ class _SafetyNoticeScreenState extends ConsumerState<SafetyNoticeScreen> {
                   }
                 },
               ),
-              TextButton(onPressed: () => ref.read(authProvider.notifier).signOut(), child: const Text('Sign out')),
+              TextButton(onPressed: () => ref.read(authProvider.notifier).signOut(), child: Text(l10n.profileSignOut)),
             ],
           ),
         ),

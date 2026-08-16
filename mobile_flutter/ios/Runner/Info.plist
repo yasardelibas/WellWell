@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>MedGuard</string>
+	<string>WellWell</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>medguard</string>
+	<string>wellwell</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -63,15 +63,15 @@
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>MedGuard uses the camera to read medication labels. Photos are processed to extract the label text and are not stored.</string>
+	<string>WellWell uses the camera to read medication labels. Photos are processed to extract the label text and are not stored.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>MedGuard can read a medication label from a photo you choose.</string>
+	<string>WellWell can read a medication label from a photo you choose.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>MedGuard does not save photos; this permission is only requested by the photo picker.</string>
+	<string>WellWell does not save photos; this permission is only requested by the photo picker.</string>
 	<key>NSFaceIDUsageDescription</key>
-	<string>MedGuard can use Face ID to unlock your medication information.</string>
+	<string>WellWell can use Face ID to unlock your medication information.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>MedGuard does not record audio; this is required by the camera plugin.</string>
+	<string>WellWell does not record audio; this is required by the camera plugin.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>

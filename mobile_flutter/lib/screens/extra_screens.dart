@@ -1,4 +1,5 @@
-import 'package:flutter/cupertino.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import 'package:local_auth/local_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../models/models.dart';
 import '../services/api.dart';
 import '../services/reminders.dart';
@@ -142,38 +144,39 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
   }
 
   Future<void> _editRefill(Medication med) async {
+    final l10n = AppLocalizations.of(context)!;
     final controller = TextEditingController(text: med.remainingQuantity?.toString() ?? '');
     final result = await showDialog<int?>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Doses remaining'),
+        title: Text(l10n.medDetailDosesRemainingTitle),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Enter how many doses (pills, sprays, etc.) you have left. Leave empty to clear.'),
+            Text(l10n.medDetailDosesRemainingMessage),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               keyboardType: TextInputType.number,
               autofocus: true,
-              decoration: const InputDecoration(hintText: 'e.g. 30'),
+              decoration: InputDecoration(hintText: l10n.medDetailDosesRemainingHint),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: Text(l10n.commonCancel)),
           if (med.remainingQuantity != null)
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, -1),
-              child: const Text('Clear'),
+              child: Text(l10n.commonClear),
             ),
           FilledButton(
             onPressed: () {
               final text = controller.text.trim();
               Navigator.pop(dialogContext, text.isEmpty ? -1 : (int.tryParse(text) ?? med.remainingQuantity ?? 0));
             },
-            child: const Text('Save'),
+            child: Text(l10n.commonSave),
           ),
         ],
       ),
@@ -202,11 +205,12 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
   Future<void> _editExpiration(Medication med) async {
     final current = med.expirationDate == null ? null : DateTime.tryParse(med.expirationDate!);
     final now = DateTime.now();
-    final picked = await showDatePicker(
+    final picked = await showBrandDatePicker(
       context: context,
       initialDate: current ?? now,
       firstDate: DateTime(now.year - 1),
       lastDate: DateTime(now.year + 15),
+      title: AppLocalizations.of(context)!.medDetailExpirationPickerTitle,
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -257,11 +261,12 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (loading) {
-      return const ScreenScaffold(children: [BackCircle(), Center(child: CircularProgressIndicator())]);
+      return const ScreenScaffold(showBack: true, children: [Center(child: CircularProgressIndicator())]);
     }
     if (error != null || item == null) {
-      return ScreenScaffold(children: [const BackCircle(), ErrorBanner(message: error ?? 'Not found', onRetry: load)]);
+      return ScreenScaffold(showBack: true, children: [ErrorBanner(message: error ?? l10n.medDetailNotFound, onRetry: load)]);
     }
     final med = item!;
     final active = schedules.where((s) => s.isActive).toList();
@@ -272,14 +277,14 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
 
     return ScreenScaffold(
       onRefresh: load,
+      showBack: true,
+      title: med.displayName,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text(med.displayName, style: Theme.of(context).textTheme.headlineMedium),
         Wrap(
           spacing: 8,
           children: [
             AppBadge(
-              label: med.verificationLabel,
+              label: med.isVerified ? l10n.commonVerified : l10n.commonUnverified,
               tone: verificationTone(med.verificationStatus),
               glyph: verificationGlyph(med.verificationStatus),
             ),
@@ -289,18 +294,17 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
         if (med.verificationStatus != 'verified')
           Callout(
             tone: Tone.attention,
-            title: 'Not independently verified',
-            message:
-                'MedGuard matches brand, generic name, strength, form and active ingredients against a trusted medication database. Edit those fields if they do not match the label, then save to try again.',
+            title: l10n.medDetailUnverifiedTitle,
+            message: l10n.medDetailUnverifiedMessage,
             child: editing
                 ? null
-                : SecondaryButton(label: 'Edit details to verify', onPressed: () => _beginEdit(med)),
+                : SecondaryButton(label: l10n.medDetailEditToVerify, onPressed: () => _beginEdit(med)),
           ),
         if (editing)
           Callout(
             tone: Tone.info,
-            title: 'Used to verify',
-            message: 'Brand, generic name, strength, form and active ingredients are matched against the database. Route, directions and notes are stored as printed and are not used to verify.',
+            title: l10n.commonUsedToVerify,
+            message: l10n.medDetailUsedToVerifyMessage,
           ),
         AppCard(
           child: Column(
@@ -308,20 +312,20 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
             children: [
               Row(
                 children: [
-                  Expanded(child: Text(editing ? 'Used to verify' : 'Active ingredients', style: Theme.of(context).textTheme.titleMedium)),
+                  Expanded(child: Text(editing ? l10n.commonUsedToVerify : l10n.medDetailActiveIngredients, style: Theme.of(context).textTheme.titleMedium)),
                   if (!editing)
-                    TextButton(onPressed: () => _beginEdit(med), child: const Text('Edit')),
+                    TextButton(onPressed: () => _beginEdit(med), child: Text(l10n.commonEdit)),
                 ],
               ),
               if (editing) ...[
                 const SizedBox(height: 8),
-                LabeledField(label: 'Brand name', controller: brand, usedForVerification: true),
+                LabeledField(label: l10n.commonBrandName, controller: brand, usedForVerification: true, icon: Icons.local_pharmacy_outlined),
                 const SizedBox(height: 12),
-                LabeledField(label: 'Generic name', controller: generic, usedForVerification: true),
+                LabeledField(label: l10n.commonGenericName, controller: generic, usedForVerification: true, icon: Icons.science_outlined),
                 const SizedBox(height: 12),
-                LabeledField(label: 'Strength', controller: strength, usedForVerification: true),
+                LabeledField(label: l10n.commonStrength, controller: strength, usedForVerification: true, icon: Icons.fitness_center_outlined),
                 const SizedBox(height: 12),
-                LabeledField(label: 'Dosage form', controller: form, usedForVerification: true),
+                LabeledField(label: l10n.commonDosageForm, controller: form, usedForVerification: true, icon: Icons.medication_outlined),
                 const SizedBox(height: 12),
                 IngredientEditor(
                   key: const ValueKey('detail-ingredients'),
@@ -329,13 +333,16 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
                   onChanged: (v) => editIngredients = v,
                 ),
               ] else if (med.ingredients.isEmpty)
-                const Text('No active ingredients are recorded for this medication.')
+                Text(l10n.medDetailNoIngredients)
               else
                 for (final ingredient in med.ingredients) ...[
                   const SizedBox(height: 10),
                   Text(ingredient.normalizedName, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Text('${ingredient.displayStrength.isEmpty ? 'Strength not recorded' : ingredient.displayStrength} · printed as “${ingredient.originalName}”'),
-                  if (ingredient.rxCui != null) Text('RxNorm identifier ${ingredient.rxCui}', style: Theme.of(context).textTheme.labelSmall),
+                  Text(l10n.medDetailIngredientStrengthLine(
+                    ingredient.displayStrength.isEmpty ? l10n.medDetailStrengthNotRecorded : ingredient.displayStrength,
+                    ingredient.originalName,
+                  )),
+                  if (ingredient.rxCui != null) Text(l10n.medDetailRxNormIdentifier(ingredient.rxCui!), style: Theme.of(context).textTheme.labelSmall),
                 ],
             ],
           ),
@@ -344,26 +351,26 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(editing ? 'On the label only' : 'About', style: Theme.of(context).textTheme.titleMedium),
+              Text(editing ? l10n.commonOnTheLabelOnly : l10n.medDetailAbout, style: Theme.of(context).textTheme.titleMedium),
               if (editing) ...[
                 const SizedBox(height: 8),
-                LabeledField(label: 'Route', controller: route, usedForVerification: false),
+                LabeledField(label: l10n.commonRoute, controller: route, usedForVerification: false, icon: Icons.route_outlined),
                 const SizedBox(height: 12),
-                LabeledField(label: 'Label directions', controller: directions, maxLines: 3, usedForVerification: false),
+                LabeledField(label: l10n.commonLabelDirections, controller: directions, maxLines: 3, usedForVerification: false, icon: Icons.list_alt_outlined),
                 const SizedBox(height: 12),
-                LabeledField(label: 'Notes', controller: notes, maxLines: 2, usedForVerification: false),
+                LabeledField(label: l10n.commonNotes, controller: notes, maxLines: 2, usedForVerification: false, icon: Icons.sticky_note_2_outlined),
                 const SizedBox(height: 16),
-                PrimaryButton(label: 'Save and try to verify', loading: busy, onPressed: _saveEdits),
-                SecondaryButton(label: 'Cancel', onPressed: () => setState(() => editing = false)),
+                PrimaryButton(label: l10n.medDetailSaveAndVerify, loading: busy, onPressed: _saveEdits),
+                SecondaryButton(label: l10n.commonCancel, onPressed: () => setState(() => editing = false)),
               ] else ...[
-                FieldRow(label: 'Brand', value: med.brandName),
-                FieldRow(label: 'Generic name', value: med.genericName),
-                FieldRow(label: 'Strength', value: med.strength),
-                FieldRow(label: 'Form', value: med.dosageForm),
-                FieldRow(label: 'Route', value: med.route),
-                FieldRow(label: 'Directions', value: med.labelDirections),
-                FieldRow(label: 'Manufacturer', value: med.manufacturer),
-                FieldRow(label: 'Notes', value: med.notes, divider: false),
+                FieldRow(label: l10n.commonBrand, value: med.brandName, icon: Icons.local_pharmacy_outlined),
+                FieldRow(label: l10n.commonGenericName, value: med.genericName, icon: Icons.science_outlined),
+                FieldRow(label: l10n.commonStrength, value: med.strength, icon: Icons.fitness_center_outlined),
+                FieldRow(label: l10n.commonForm, value: med.dosageForm, icon: Icons.medication_outlined),
+                FieldRow(label: l10n.commonRoute, value: med.route, icon: Icons.route_outlined),
+                FieldRow(label: l10n.commonDirections, value: med.labelDirections, icon: Icons.list_alt_outlined),
+                FieldRow(label: l10n.commonManufacturer, value: med.manufacturer, icon: Icons.factory_outlined),
+                FieldRow(label: l10n.commonNotes, value: med.notes, divider: false, icon: Icons.sticky_note_2_outlined),
               ],
             ],
           ),
@@ -377,16 +384,16 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
                   children: [
                     Icon(Icons.auto_awesome, size: 20, color: Palette.brand),
                     const SizedBox(width: 8),
-                    Expanded(child: Text('About this medication', style: Theme.of(context).textTheme.titleMedium)),
+                    Expanded(child: Text(l10n.medDetailAboutMedication, style: Theme.of(context).textTheme.titleMedium)),
                     if (education!.generatedByAi)
-                      Text('AI info', style: Theme.of(context).textTheme.labelSmall),
+                      Text(l10n.medDetailAiInfo, style: Theme.of(context).textTheme.labelSmall),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Text(education!.message, style: const TextStyle(height: 1.4)),
                 if (education!.usedFor.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  Text('Commonly used for', style: Theme.of(context).textTheme.labelLarge),
+                  Text(l10n.medDetailCommonlyUsedFor, style: Theme.of(context).textTheme.labelLarge),
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 8,
@@ -396,11 +403,11 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
                 ],
                 if (education!.drugClass != null && education!.drugClass!.isNotEmpty) ...[
                   const SizedBox(height: 12),
-                  FieldRow(label: 'Class', value: education!.drugClass, divider: false),
+                  FieldRow(label: l10n.medDetailClass, value: education!.drugClass, divider: false),
                 ],
                 if (education!.usedFor.isNotEmpty || education!.drugClass != null) ...[
                   const SizedBox(height: 8),
-                  Text('Source: RxClass (U.S. National Library of Medicine).', style: Theme.of(context).textTheme.labelSmall),
+                  Text(l10n.medDetailSourceRxClass, style: Theme.of(context).textTheme.labelSmall),
                 ],
               ],
             ),
@@ -409,12 +416,12 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Source', style: Theme.of(context).textTheme.titleMedium),
-              FieldRow(label: 'Provider', value: med.provenance?.provider ?? 'Entered manually'),
-              FieldRow(label: 'Identifier', value: med.provenance?.externalIdentifier ?? med.rxCui),
-              FieldRow(label: 'Dataset version', value: med.provenance?.datasetVersion),
-              FieldRow(label: 'Last verified', value: med.provenance == null ? 'Not verified' : formatDateTime(med.provenance!.retrievedAt)),
-              FieldRow(label: 'Added on', value: med.createdAt == null ? null : formatDate(med.createdAt!), divider: false),
+              Text(l10n.medDetailSourceTitle, style: Theme.of(context).textTheme.titleMedium),
+              FieldRow(label: l10n.commonProvider, value: med.provenance?.provider ?? l10n.medDetailEnteredManually),
+              FieldRow(label: l10n.commonIdentifier, value: med.provenance?.externalIdentifier ?? med.rxCui),
+              FieldRow(label: l10n.commonDatasetVersion, value: med.provenance?.datasetVersion),
+              FieldRow(label: l10n.medDetailLastVerified, value: med.provenance == null ? l10n.medDetailNotVerified : formatDateTime(med.provenance!.retrievedAt)),
+              FieldRow(label: l10n.medDetailAddedOn, value: med.createdAt == null ? null : formatDate(med.createdAt!), divider: false),
             ],
           ),
         ),
@@ -424,13 +431,13 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
             children: [
               Row(
                 children: [
-                  Expanded(child: Text('Schedule', style: Theme.of(context).textTheme.titleMedium)),
-                  AppBadge(label: '${active.length} active', tone: active.isEmpty ? Tone.neutral : Tone.info, glyph: '⏰'),
+                  Expanded(child: Text(l10n.medDetailScheduleTitle, style: Theme.of(context).textTheme.titleMedium)),
+                  AppBadge(label: l10n.medDetailActiveCount(active.length), tone: active.isEmpty ? Tone.neutral : Tone.info, glyph: '⏰'),
                 ],
               ),
               const SizedBox(height: 8),
               if (active.isEmpty)
-                const Text('No reminders yet. Reminder times are only suggestions from the label until you confirm them.')
+                Text(l10n.medDetailNoRemindersYet)
               else
                 Wrap(
                   spacing: 8,
@@ -445,11 +452,11 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Next dose', style: Theme.of(context).textTheme.labelLarge),
+                      Text(l10n.medDetailNextDose, style: Theme.of(context).textTheme.labelLarge),
                       Text(nextDose.scheduledTime, style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 8),
                       PrimaryButton(
-                        label: 'Take',
+                        label: l10n.commonTake,
                         loading: busy,
                         onPressed: () async {
                           HapticFeedback.selectionClick();
@@ -470,7 +477,7 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
               ],
               const SizedBox(height: 12),
               SecondaryButton(
-                label: active.isEmpty ? 'Set up reminders' : 'Edit reminders',
+                label: active.isEmpty ? l10n.medDetailSetUpReminders : l10n.medDetailEditReminders,
                 onPressed: () async {
                   await context.push('/schedule/${med.id}');
                   if (mounted) await load();
@@ -485,35 +492,35 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
             children: [
               Row(
                 children: [
-                  Expanded(child: Text('Refill', style: Theme.of(context).textTheme.titleMedium)),
+                  Expanded(child: Text(l10n.medDetailRefillTitle, style: Theme.of(context).textTheme.titleMedium)),
                   Icon(Icons.medication_outlined, color: Palette.brand),
                 ],
               ),
               const SizedBox(height: 8),
               if (rq == null)
-                const Text('Track how many doses you have left to get a refill reminder before you run out.')
+                Text(l10n.medDetailRefillTrackMessage)
               else ...[
-                Text('$rq doses left', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+                Text(l10n.medDetailDosesLeft(rq), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
                 if (daysLeft != null)
                   Text(
                     daysLeft <= 0
-                        ? 'You may be out — time to refill.'
-                        : 'About $daysLeft ${daysLeft == 1 ? 'day' : 'days'} left at your current reminder schedule.',
+                        ? l10n.medDetailOutOfRefill
+                        : l10n.medDetailDaysLeftAtSchedule(daysLeft),
                   )
                 else
-                  const Text('Set up reminders to estimate how many days this will last.'),
+                  Text(l10n.medDetailEstimateDaysMessage),
                 if (daysLeft != null && daysLeft <= 5) ...[
                   const SizedBox(height: 8),
-                  const Callout(
+                  Callout(
                     tone: Tone.attention,
-                    title: 'Running low',
-                    message: 'Consider ordering a refill soon so you don’t miss a dose.',
+                    title: l10n.medDetailRunningLowTitle,
+                    message: l10n.medDetailRunningLowMessage,
                   ),
                 ],
               ],
               const SizedBox(height: 12),
               SecondaryButton(
-                label: rq == null ? 'Add pill count' : 'Update pill count',
+                label: rq == null ? l10n.medDetailAddPillCount : l10n.medDetailUpdatePillCount,
                 onPressed: () => _editRefill(med),
               ),
             ],
@@ -525,15 +532,16 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
             children: [
               Row(
                 children: [
-                  Expanded(child: Text('Expiration', style: Theme.of(context).textTheme.titleMedium)),
+                  Expanded(child: Text(l10n.medDetailExpirationTitle, style: Theme.of(context).textTheme.titleMedium)),
                   Icon(Icons.event_outlined, color: Palette.brand),
                 ],
               ),
               const SizedBox(height: 8),
               Builder(builder: (context) {
+                final l10n = AppLocalizations.of(context)!;
                 final expiration = med.expirationDate == null ? null : DateTime.tryParse(med.expirationDate!);
                 if (expiration == null) {
-                  return const Text('Add the date printed on the label to get a reminder before it expires.');
+                  return Text(l10n.medDetailExpirationEmptyMessage);
                 }
                 final daysUntil = expiration.difference(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)).inDays;
                 return Column(
@@ -542,19 +550,19 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
                     Text(formatDate(med.expirationDate!), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
                     Text(
                       daysUntil < 0
-                          ? 'This expired ${-daysUntil} ${-daysUntil == 1 ? 'day' : 'days'} ago.'
+                          ? l10n.medDetailExpiredAgo(-daysUntil)
                           : daysUntil == 0
-                              ? 'This expires today.'
-                              : 'Expires in $daysUntil ${daysUntil == 1 ? 'day' : 'days'}.',
+                              ? l10n.medDetailExpiresToday
+                              : l10n.medDetailExpiresIn(daysUntil),
                     ),
                     if (daysUntil <= 30) ...[
                       const SizedBox(height: 8),
                       Callout(
                         tone: daysUntil < 0 ? Tone.critical : Tone.attention,
-                        title: daysUntil < 0 ? 'Expired' : 'Expiring soon',
+                        title: daysUntil < 0 ? l10n.medDetailExpiredTitle : l10n.medDetailExpiringSoonTitle,
                         message: daysUntil < 0
-                            ? 'Check whether this medication is still safe to use, or replace it.'
-                            : 'Consider a replacement before it expires.',
+                            ? l10n.medDetailExpiredMessage
+                            : l10n.medDetailExpiringSoonMessage,
                       ),
                     ],
                   ],
@@ -565,13 +573,13 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
                 children: [
                   Expanded(
                     child: SecondaryButton(
-                      label: med.expirationDate == null ? 'Add expiration date' : 'Update expiration date',
+                      label: med.expirationDate == null ? l10n.medDetailAddExpiration : l10n.medDetailUpdateExpiration,
                       onPressed: () => _editExpiration(med),
                     ),
                   ),
                   if (med.expirationDate != null) ...[
                     const SizedBox(width: 8),
-                    TextButton(onPressed: () => _clearExpiration(med), child: const Text('Clear')),
+                    TextButton(onPressed: () => _clearExpiration(med), child: Text(l10n.commonClear)),
                   ],
                 ],
               ),
@@ -579,18 +587,18 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
           ),
         ),
         if (actionError != null) Text(actionError!, style: TextStyle(color: Palette.critical)),
-        SecondaryButton(label: 'View dose history', onPressed: () => context.push('/history?medicationId=${med.id}')),
+        SecondaryButton(label: l10n.medDetailViewDoseHistory, onPressed: () => context.push('/history?medicationId=${med.id}')),
         DangerButton(
-          label: 'Remove medication',
+          label: l10n.medDetailRemoveMedication,
           onPressed: () async {
             final ok = await showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('Remove this medication?'),
-                content: const Text('It will no longer appear in your list, reminders or safety checks. Your dose history stays intact.'),
+                title: Text(l10n.medDetailRemoveDialogTitle),
+                content: Text(l10n.medDetailRemoveDialogMessage),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep it')),
-                  TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove')),
+                  TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.medDetailKeepIt)),
+                  TextButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.commonRemove)),
                 ],
               ),
             );
@@ -638,7 +646,7 @@ class _NewMedicationScreenState extends ConsumerState<NewMedicationScreen> {
 
   Future<void> save() async {
     if (brand.text.trim().isEmpty && generic.text.trim().isEmpty) {
-      setState(() => error = 'Add a brand name or a generic name.');
+      setState(() => error = AppLocalizations.of(context)!.newMedBrandOrGenericRequired);
       return;
     }
     setState(() {
@@ -671,26 +679,27 @@ class _NewMedicationScreenState extends ConsumerState<NewMedicationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ScreenScaffold(
+      showBack: true,
+      title: l10n.newMedTitle,
+      subtitle: l10n.newMedSubtitle,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Add a medication', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Copy the details from the label. Fields marked “Used to verify” are matched against a trusted medication database.'),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Used to verify', style: Theme.of(context).textTheme.titleMedium),
+              Text(l10n.commonUsedToVerify, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 4),
-              const Text('Brand, generic name, strength, form and active ingredients decide whether this product can be verified.'),
+              Text(l10n.newMedUsedToVerifyMessage),
               const SizedBox(height: 12),
-              LabeledField(label: 'Brand name', controller: brand, hint: 'As printed on the box', usedForVerification: true),
+              LabeledField(label: l10n.commonBrandName, controller: brand, hint: l10n.newMedHintAsPrinted, usedForVerification: true, icon: Icons.local_pharmacy_outlined),
               const SizedBox(height: 12),
-              LabeledField(label: 'Generic name', controller: generic, usedForVerification: true),
+              LabeledField(label: l10n.commonGenericName, controller: generic, usedForVerification: true, icon: Icons.science_outlined),
               const SizedBox(height: 12),
-              LabeledField(label: 'Strength', controller: strength, hint: '500 mg', usedForVerification: true),
+              LabeledField(label: l10n.commonStrength, controller: strength, hint: '500 mg', usedForVerification: true, icon: Icons.fitness_center_outlined),
               const SizedBox(height: 12),
-              LabeledField(label: 'Dosage form', controller: form, hint: 'Tablet', usedForVerification: true),
+              LabeledField(label: l10n.commonDosageForm, controller: form, usedForVerification: true, icon: Icons.medication_outlined),
               const SizedBox(height: 12),
               IngredientEditor(ingredients: ingredients, onChanged: (v) => ingredients = v),
             ],
@@ -700,16 +709,16 @@ class _NewMedicationScreenState extends ConsumerState<NewMedicationScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('On the label only', style: Theme.of(context).textTheme.titleMedium),
+              Text(l10n.commonOnTheLabelOnly, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 4),
-              const Text('Directions are stored as printed. They are not used to verify the product.'),
+              Text(l10n.newMedDirectionsStoredMessage),
               const SizedBox(height: 12),
-              LabeledField(label: 'Label directions', controller: directions, maxLines: 3, usedForVerification: false),
+              LabeledField(label: l10n.commonLabelDirections, controller: directions, maxLines: 3, usedForVerification: false, icon: Icons.list_alt_outlined),
             ],
           ),
         ),
         if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
-        PrimaryButton(label: 'Save medication', loading: busy, onPressed: save),
+        PrimaryButton(label: l10n.newMedSaveButton, loading: busy, onPressed: save),
       ],
     );
   }
@@ -781,19 +790,20 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   }
 
   Future<void> save() async {
+    final l10n = AppLocalizations.of(context)!;
     final cleaned = times.map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
     final timePattern = RegExp(r'^([01]\d|2[0-3]):([0-5]\d)$');
     if (cleaned.isEmpty) {
-      setState(() => error = 'Add at least one reminder time, or remove the reminders for this medication.');
+      setState(() => error = l10n.scheduleAddAtLeastOne);
       return;
     }
     final invalid = cleaned.where((t) => !timePattern.hasMatch(t)).firstOrNull;
     if (invalid != null) {
-      setState(() => error = '"$invalid" is not a valid time. Use the 24-hour format, for example 08:00.');
+      setState(() => error = l10n.scheduleInvalidTime(invalid));
       return;
     }
     if (!confirmed) {
-      setState(() => error = 'Confirm the reminder times before saving.');
+      setState(() => error = l10n.scheduleConfirmBeforeSaving);
       return;
     }
     setState(() {
@@ -815,7 +825,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
       if (!reminders.permissionGranted) {
         setState(() {
           busy = false;
-          error = 'Reminders were saved, but notification permission is off. Enable notifications for MedGuard in iPhone Settings.';
+          error = AppLocalizations.of(context)!.scheduleNotificationPermissionOff;
         });
         return;
       }
@@ -832,142 +842,118 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   }
 
   Future<void> _addTime() async {
+    final l10n = AppLocalizations.of(context)!;
+    final picked = await showBrandTimePicker(context: context, initialTime: '08:00', title: l10n.scheduleAddReminderTime);
+    if (picked == null || !mounted) return;
     setState(() {
-      times.add('08:00');
+      times.add(picked);
       timeKeys.add(UniqueKey());
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (loading) {
-      return const ScreenScaffold(children: [BackCircle(), Center(child: CircularProgressIndicator())]);
+      return const ScreenScaffold(showBack: true, children: [Center(child: CircularProgressIndicator())]);
     }
     return ScreenScaffold(
+      showBack: true,
+      title: l10n.scheduleEditReminderTitle,
+      subtitle: medication?.displayName,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Edit reminder', style: Theme.of(context).textTheme.headlineMedium),
-        Text(medication?.displayName ?? ''),
         if (suggestion?.labelInstruction != null)
-          Callout(title: 'From the label', message: suggestion!.labelInstruction!),
+          Callout(title: l10n.scheduleFromLabelTitle, message: suggestion!.labelInstruction!),
         AppCard(
           child: Column(
             children: [
               for (var i = 0; i < times.length; i++)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: _ReminderTimePicker(
+                  child: _ReminderTimeTile(
                     key: timeKeys[i],
                     time: times[i],
-                    onChanged: (value) => times[i] = value,
+                    onEdit: () async {
+                      final picked = await showBrandTimePicker(context: context, initialTime: times[i]);
+                      if (picked == null || !mounted) return;
+                      setState(() => times[i] = picked);
+                    },
                     onRemove: () {
-                      final removedTime = times[i];
-                      final removedKey = timeKeys[i];
                       setState(() {
                         times.removeAt(i);
                         timeKeys.removeAt(i);
                       });
-                      showAppSnackBar(
-                        context,
-                        'Reminder time removed.',
-                        actionLabel: 'Undo',
-                        onAction: () => setState(() {
-                          final restoreAt = i <= times.length ? i : times.length;
-                          times.insert(restoreAt, removedTime);
-                          timeKeys.insert(restoreAt, removedKey);
-                        }),
-                      );
                     },
                   ),
                 ),
-              TextButton(onPressed: _addTime, child: const Text('Add a date and time')),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _addTime,
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.scheduleAddReminderTime),
+                ),
+              ),
               const SizedBox(height: 8),
-              LabeledField(label: 'Dose amount', controller: doseAmount, hint: '1 tablet'),
+              LabeledField(label: l10n.commonDoseAmount, controller: doseAmount, hint: '1 tablet'),
             ],
           ),
         ),
         CheckboxRow(
-          label: 'I confirmed these reminder times against the label.',
+          label: l10n.scheduleConfirmCheckbox,
           checked: confirmed,
           onChanged: (v) => setState(() => confirmed = v),
         ),
         if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
-        PrimaryButton(label: 'Save reminders', loading: busy, onPressed: save),
+        PrimaryButton(label: l10n.scheduleSaveReminders, loading: busy, onPressed: save),
       ],
     );
   }
 }
 
-class _ReminderTimePicker extends StatefulWidget {
-  const _ReminderTimePicker({super.key, required this.time, required this.onChanged, required this.onRemove});
+/// A single reminder time shown as a clean, tappable row. Tapping opens the
+/// themed time-picker bottom sheet; only the time of day matters because
+/// schedules repeat daily (see matchDateTimeComponents in Reminders).
+class _ReminderTimeTile extends StatelessWidget {
+  const _ReminderTimeTile({super.key, required this.time, required this.onEdit, required this.onRemove});
 
   final String time;
-  final ValueChanged<String> onChanged;
+  final VoidCallback onEdit;
   final VoidCallback onRemove;
 
   @override
-  State<_ReminderTimePicker> createState() => _ReminderTimePickerState();
-}
-
-class _ReminderTimePickerState extends State<_ReminderTimePicker> {
-  late DateTime _selected;
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    final parts = widget.time.split(':');
-    final hour = parts.isNotEmpty ? (int.tryParse(parts[0]) ?? 8).clamp(0, 23).toInt() : 8;
-    final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0).clamp(0, 59).toInt() : 0;
-    _selected = DateTime(now.year, now.month, now.day, hour, minute);
-  }
-
-  String _label(DateTime value) =>
-      '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
-
-  @override
   Widget build(BuildContext context) {
-    // Only the time of day is ever used (schedules repeat daily - see matchDateTimeComponents:
-    // DateTimeComponents.time in Reminders), so the picker only asks for a time. It used to be
-    // a date+time wheel, which forced scrolling past an irrelevant date to reach the time and
-    // made picking e.g. "next month" look like it was trying (and failing) to set a real date.
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            children: [
-              Text(_label(_selected), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-              const SizedBox(height: 4),
-              Text('Repeats every day at this time.', style: TextStyle(color: Palette.inkMuted, fontSize: 12)),
-              SizedBox(
-                height: 216,
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: (_) => true,
-                  child: CupertinoTheme(
-                    data: CupertinoThemeData(brightness: Theme.of(context).brightness),
-                    child: CupertinoDatePicker(
-                      mode: CupertinoDatePickerMode.time,
-                      use24hFormat: true,
-                      initialDateTime: _selected,
-                      onDateTimeChanged: (value) {
-                        setState(() => _selected = value);
-                        widget.onChanged(
-                          '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}',
-                        );
-                      },
-                    ),
-                  ),
-                ),
+    return InkWell(
+      onTap: onEdit,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+        decoration: BoxDecoration(
+          color: Palette.surfaceMuted,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Palette.line),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.alarm_outlined, color: Palette.brand, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(time, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+                  Text(AppLocalizations.of(context)!.commonRepeatsEveryDay, style: TextStyle(color: Palette.inkMuted, fontSize: 12)),
+                ],
               ),
-            ],
-          ),
+            ),
+            Text(AppLocalizations.of(context)!.commonEdit, style: TextStyle(color: Palette.brand, fontWeight: FontWeight.w600)),
+            IconButton(
+              onPressed: onRemove,
+              icon: Icon(Icons.delete_outline, color: Palette.inkMuted),
+            ),
+          ],
         ),
-        IconButton(
-          onPressed: widget.onRemove,
-          icon: const Icon(Icons.delete_outline),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -1057,24 +1043,23 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final data = history;
     return ScreenScaffold(
       onRefresh: load,
+      showBack: true,
+      title: l10n.historyTitle,
+      subtitle: selectedMonth == null
+          ? l10n.historySubtitleDefault
+          : l10n.historySubtitleMonth(formatMonth(selectedMonth!)),
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('History', style: Theme.of(context).textTheme.headlineMedium),
-        Text(
-          selectedMonth == null
-              ? 'Completed, skipped and missed doses over the last two weeks.'
-              : 'Completed, skipped and missed doses in ${formatMonth(selectedMonth!)}.',
-        ),
         Row(
           children: [
             IconButton(onPressed: () => _shiftMonth(-1), icon: const Icon(Icons.chevron_left)),
             Expanded(
               child: Center(
                 child: Text(
-                  selectedMonth == null ? 'Last 2 weeks' : formatMonth(selectedMonth!),
+                  selectedMonth == null ? l10n.historyLast2Weeks : formatMonth(selectedMonth!),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
@@ -1088,14 +1073,14 @@ class _HistoryScreenState extends State<HistoryScreen> {
               },
               icon: const Icon(Icons.chevron_right),
             ),
-            if (selectedMonth != null) TextButton(onPressed: _resetToDefaultWindow, child: const Text('Reset')),
+            if (selectedMonth != null) TextButton(onPressed: _resetToDefaultWindow, child: Text(l10n.commonReset)),
           ],
         ),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _Chip(label: 'All medications', active: filter == null, onTap: () { setState(() => filter = null); load(); }),
+              _Chip(label: l10n.historyAllMedications, active: filter == null, onTap: () { setState(() => filter = null); load(); }),
               for (final med in medications)
                 _Chip(label: med.displayName, active: filter == med.id, onTap: () { setState(() => filter = med.id); load(); }),
             ],
@@ -1111,7 +1096,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (selectedMonth == null) ...[
-                  Text('This week', style: Theme.of(context).textTheme.titleMedium),
+                  Text(l10n.historyThisWeek, style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 12),
                   WeeklyBarChart(history: data),
                   const SizedBox(height: 12),
@@ -1123,30 +1108,28 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    AppBadge(label: '${data.takenCount} taken', tone: Tone.safe, glyph: '✓'),
-                    AppBadge(label: '${data.skippedCount} skipped', tone: Tone.neutral, glyph: '—'),
-                    AppBadge(label: '${data.missedCount} missed', tone: Tone.attention, glyph: '!'),
-                    AppBadge(label: '${data.pendingCount} pending', tone: Tone.info, glyph: '•'),
+                    AppBadge(label: l10n.commonTakenCount(data.takenCount), tone: Tone.safe, glyph: '✓'),
+                    AppBadge(label: l10n.commonSkippedCount(data.skippedCount), tone: Tone.neutral, glyph: '—'),
+                    AppBadge(label: l10n.commonMissedCount(data.missedCount), tone: Tone.attention, glyph: '!'),
+                    AppBadge(label: l10n.commonPendingCount(data.pendingCount), tone: Tone.info, glyph: '•'),
                   ],
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'These counts describe what happened, not how well you did. Talk to your healthcare professional if a pattern concerns you.',
-                ),
+                Text(l10n.historyDisclaimer),
               ],
             ),
           ),
           if (filter == null && summary != null)
             InsightCard(message: summary!.message, generatedByAi: summary!.generatedByAi),
           if (data.days.isEmpty)
-            const EmptyState(
+            EmptyState(
               icon: Icons.calendar_today_outlined,
-              title: 'No doses recorded yet',
-              description: 'Once reminders are confirmed, every taken, skipped or missed dose appears here.',
+              title: l10n.historyEmptyTitle,
+              description: l10n.historyEmptyDescription,
             )
           else
             for (final day in data.days) ...[
-              Text(isToday(day.date) ? 'Today' : formatDate(day.date), style: Theme.of(context).textTheme.labelLarge),
+              Text(isToday(day.date) ? l10n.commonToday : formatDate(day.date), style: Theme.of(context).textTheme.labelLarge),
               AppCard(
                 child: Column(
                   children: [
@@ -1235,13 +1218,14 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final d = data;
     return ScreenScaffold(
       onRefresh: load,
+      showBack: true,
+      title: l10n.insightsTitle,
+      subtitle: l10n.insightsSubtitle,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Insights', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Your on-time streak and habits over the last 30 days.'),
         if (loading)
           const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
         else if (error != null)
@@ -1270,7 +1254,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   style: TextStyle(fontSize: 44, fontWeight: FontWeight.w800, color: dark ? const Color(0xFFFDBA74) : const Color(0xFFC2410C)),
                 ),
                 Text(
-                  d.streakDays == 1 ? 'day on-time streak' : 'days on-time streak',
+                  l10n.insightsStreakDayLabel(d.streakDays),
                   style: TextStyle(color: dark ? const Color(0xFFFDD9B5) : const Color(0xFF9A3412), fontWeight: FontWeight.w600),
                 ),
               ],
@@ -1281,10 +1265,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Last 30 days', style: Theme.of(context).textTheme.titleMedium),
+                Text(l10n.insightsLast30Days, style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 4),
                 Text(
-                  '${d.adherencePercent}% of resolved doses taken on time',
+                  l10n.insightsAdherencePercent(d.adherencePercent),
                   style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
                 ),
                 const SizedBox(height: 12),
@@ -1292,10 +1276,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    AppBadge(label: '${d.takenCount} taken', tone: Tone.safe, glyph: '✓'),
-                    AppBadge(label: '${d.skippedCount} skipped', tone: Tone.neutral, glyph: '—'),
-                    AppBadge(label: '${d.missedCount} missed', tone: Tone.attention, glyph: '!'),
-                    AppBadge(label: '${d.pendingCount} pending', tone: Tone.info, glyph: '•'),
+                    AppBadge(label: l10n.commonTakenCount(d.takenCount), tone: Tone.safe, glyph: '✓'),
+                    AppBadge(label: l10n.commonSkippedCount(d.skippedCount), tone: Tone.neutral, glyph: '—'),
+                    AppBadge(label: l10n.commonMissedCount(d.missedCount), tone: Tone.attention, glyph: '!'),
+                    AppBadge(label: l10n.commonPendingCount(d.pendingCount), tone: Tone.info, glyph: '•'),
                   ],
                 ),
               ],
@@ -1313,18 +1297,16 @@ class _InsightsScreenState extends State<InsightsScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${_titleCase(d.weakestTimeOfDay!)} doses', style: Theme.of(context).textTheme.titleMedium),
+                        Text(l10n.insightsWeakestTimeDoses(_timeOfDayLabel(d.weakestTimeOfDay!, l10n)), style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 4),
-                        Text('This is the time of day you most often miss. A reminder around then may help you stay on track.'),
+                        Text(l10n.insightsWeakestTimeMessage),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-          const Text(
-            'These numbers describe what happened, not how well you did. They are not medical advice — talk to your healthcare professional if a pattern concerns you.',
-          ),
+          Text(l10n.insightsDisclaimer),
         ],
       ],
     );
@@ -1332,6 +1314,21 @@ class _InsightsScreenState extends State<InsightsScreen> {
 
   static String _titleCase(String value) =>
       value.isEmpty ? value : '${value[0].toUpperCase()}${value.substring(1)}';
+
+  static String _timeOfDayLabel(String value, AppLocalizations l10n) {
+    switch (value) {
+      case 'morning':
+        return l10n.insightsTimeMorning;
+      case 'afternoon':
+        return l10n.insightsTimeAfternoon;
+      case 'evening':
+        return l10n.insightsTimeEvening;
+      case 'night':
+        return l10n.insightsTimeNight;
+      default:
+        return _titleCase(value);
+    }
+  }
 }
 
 class EmergencyScreen extends StatefulWidget {
@@ -1385,7 +1382,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
         card = updated;
         draft = updated;
       });
-      if (context.mounted) showAppSnackBar(context, 'Your emergency card was updated.');
+      if (context.mounted) showAppSnackBar(context, AppLocalizations.of(context)!.emergencyUpdatedSnackbar);
     } catch (e) {
       setState(() => error = describeError(e));
     } finally {
@@ -1395,20 +1392,21 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (loading) return const ScreenScaffold(children: [BackCircle(), Center(child: CircularProgressIndicator())]);
+    final l10n = AppLocalizations.of(context)!;
+    if (loading) return const ScreenScaffold(showBack: true, children: [Center(child: CircularProgressIndicator())]);
     if (draft == null || card == null) {
-      return ScreenScaffold(children: [const BackCircle(), ErrorBanner(message: error ?? 'Unavailable', onRetry: load)]);
+      return ScreenScaffold(showBack: true, children: [ErrorBanner(message: error ?? l10n.emergencyUnavailable, onRetry: load)]);
     }
     final current = draft!;
     return ScreenScaffold(
+      showBack: true,
+      title: l10n.profileEmergencyCard,
+      subtitle: l10n.emergencySubtitle,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Emergency card', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Share only what you choose. The QR code holds a random link, never your medical information.'),
         AppCard(
           child: ToggleRow(
-            label: 'Emergency card is active',
-            hint: 'Turn this off to make the link stop working.',
+            label: l10n.emergencyActiveToggle,
+            hint: l10n.emergencyActiveHint,
             value: current.isEnabled,
             onChanged: (v) => setState(() => draft = current.copyWith(isEnabled: v)),
           ),
@@ -1419,7 +1417,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
               children: [
                 QrImageView(data: card!.shareUrl, size: 220),
                 Text(card!.shareUrl, textAlign: TextAlign.center, style: Theme.of(context).textTheme.labelSmall),
-                Text('Last updated ${formatDateTime(card!.updatedAt)}', style: Theme.of(context).textTheme.labelSmall),
+                Text(l10n.emergencyLastUpdated(formatDateTime(card!.updatedAt)), style: Theme.of(context).textTheme.labelSmall),
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -1427,10 +1425,10 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: card!.shareUrl));
-                          showAppSnackBar(context, 'Link copied.');
+                          showAppSnackBar(context, l10n.commonLinkCopied);
                         },
                         icon: const Icon(Icons.copy_outlined),
-                        label: const Text('Copy link'),
+                        label: Text(l10n.commonCopyLink),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -1438,7 +1436,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                       child: OutlinedButton.icon(
                         onPressed: () => SharePlus.instance.share(ShareParams(text: card!.shareUrl)),
                         icon: const Icon(Icons.ios_share),
-                        label: const Text('Share'),
+                        label: Text(l10n.commonShare),
                       ),
                     ),
                   ],
@@ -1447,34 +1445,34 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
             ),
           )
         else
-          const Callout(tone: Tone.neutral, title: 'The card is switched off', message: 'Nobody can open the link while the card is inactive.'),
+          Callout(tone: Tone.neutral, title: l10n.emergencyOffTitle, message: l10n.emergencyOffMessage),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('What is shared', style: Theme.of(context).textTheme.titleMedium),
-              ToggleRow(label: 'Name', value: current.shareName, onChanged: (v) => setState(() => draft = current.copyWith(shareName: v))),
-              ToggleRow(label: 'Allergies', value: current.shareAllergies, onChanged: (v) => setState(() => draft = current.copyWith(shareAllergies: v))),
-              ToggleRow(label: 'Active medications', value: current.shareMedications, onChanged: (v) => setState(() => draft = current.copyWith(shareMedications: v))),
-              ToggleRow(label: 'Emergency contact', value: current.shareEmergencyContact, onChanged: (v) => setState(() => draft = current.copyWith(shareEmergencyContact: v))),
-              ToggleRow(label: 'Notes', value: current.shareNotes, onChanged: (v) => setState(() => draft = current.copyWith(shareNotes: v))),
+              Text(l10n.emergencyWhatIsShared, style: Theme.of(context).textTheme.titleMedium),
+              ToggleRow(label: l10n.authName, value: current.shareName, onChanged: (v) => setState(() => draft = current.copyWith(shareName: v))),
+              ToggleRow(label: l10n.emergencyAllergies, value: current.shareAllergies, onChanged: (v) => setState(() => draft = current.copyWith(shareAllergies: v))),
+              ToggleRow(label: l10n.emergencyActiveMedications, value: current.shareMedications, onChanged: (v) => setState(() => draft = current.copyWith(shareMedications: v))),
+              ToggleRow(label: l10n.emergencyContactLabel, value: current.shareEmergencyContact, onChanged: (v) => setState(() => draft = current.copyWith(shareEmergencyContact: v))),
+              ToggleRow(label: l10n.commonNotes, value: current.shareNotes, onChanged: (v) => setState(() => draft = current.copyWith(shareNotes: v))),
             ],
           ),
         ),
         _EmergencyFields(draft: current, onChanged: (next) => setState(() => draft = next)),
         if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
-        PrimaryButton(label: 'Save card', loading: busy, onPressed: save),
+        PrimaryButton(label: l10n.emergencySaveCard, loading: busy, onPressed: save),
         SecondaryButton(
-          label: 'Create a new QR code',
+          label: l10n.emergencyCreateNewQr,
           onPressed: () async {
             final ok = await showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('Create a new QR code?'),
-                content: const Text('The previous QR code and link stop working immediately.'),
+                title: Text(l10n.emergencyNewQrDialogTitle),
+                content: Text(l10n.emergencyNewQrDialogMessage),
                 actions: [
-                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep the current one')),
-                  TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Create new')),
+                  TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.emergencyKeepCurrent)),
+                  TextButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.emergencyCreateNew)),
                 ],
               ),
             );
@@ -1488,9 +1486,9 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
             }
           },
         ),
-        const Callout(
-          title: 'How the QR code works',
-          message: 'The code points to a random, revocable link. Opening it shows only the fields you switched on, and never your account details.',
+        Callout(
+          title: l10n.emergencyHowItWorksTitle,
+          message: l10n.emergencyHowItWorksMessage,
         ),
       ],
     );
@@ -1538,20 +1536,21 @@ class _EmergencyFieldsState extends State<_EmergencyFields> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AppCard(
       child: Column(
         children: [
-          LabeledField(label: 'Name shown', controller: name, hint: 'The name responders should see'),
+          LabeledField(label: l10n.emergencyNameShown, controller: name, hint: l10n.emergencyNameShownHint),
           const SizedBox(height: 12),
-          LabeledField(label: 'Allergies', controller: allergies, maxLines: 3, hint: 'Penicillin'),
+          LabeledField(label: l10n.emergencyAllergies, controller: allergies, maxLines: 3, hint: 'Penicillin'),
           const SizedBox(height: 12),
-          LabeledField(label: 'Emergency contact name', controller: contact),
+          LabeledField(label: l10n.emergencyContactName, controller: contact),
           const SizedBox(height: 12),
-          LabeledField(label: 'Emergency contact phone', controller: phone, keyboardType: TextInputType.phone),
+          LabeledField(label: l10n.emergencyContactPhone, controller: phone, keyboardType: TextInputType.phone),
           const SizedBox(height: 12),
-          LabeledField(label: 'Important notes', controller: notes, maxLines: 3),
+          LabeledField(label: l10n.emergencyImportantNotes, controller: notes, maxLines: 3),
           const SizedBox(height: 8),
-          TextButton(onPressed: emit, child: const Text('Apply details')),
+          TextButton(onPressed: emit, child: Text(l10n.emergencyApplyDetails)),
         ],
       ),
     );
@@ -1603,14 +1602,14 @@ class _CaregiversScreenState extends State<CaregiversScreen> {
     }
   }
 
-  String statusLabel(String status) {
+  String statusLabel(String status, AppLocalizations l10n) {
     switch (status) {
       case 'Invited':
-        return 'Invitation sent';
+        return l10n.caregiversStatusInvited;
       case 'Accepted':
-        return 'Waiting for your approval';
+        return l10n.caregiversStatusWaiting;
       case 'Active':
-        return 'Active';
+        return l10n.caregiversStatusActive;
       default:
         return status;
     }
@@ -1618,39 +1617,40 @@ class _CaregiversScreenState extends State<CaregiversScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ScreenScaffold(
       onRefresh: load,
+      showBack: true,
+      title: l10n.profileShareAccess,
+      subtitle: l10n.caregiversSubtitle,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Share access', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('You stay the owner of your data. A caregiver only sees exactly what you approve, and you can remove access at any time.'),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Invite a caregiver', style: Theme.of(context).textTheme.titleMedium),
+              Text(l10n.caregiversInviteTitle, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 12),
-              LabeledField(label: 'Email address', controller: email, keyboardType: TextInputType.emailAddress, hint: 'caregiver@example.com'),
+              LabeledField(label: l10n.commonEmailAddress, controller: email, keyboardType: TextInputType.emailAddress, hint: 'caregiver@example.com'),
               const SizedBox(height: 12),
-              Text('What they may see', style: Theme.of(context).textTheme.labelLarge),
-              for (final permission in caregiverPermissions)
+              Text(l10n.caregiversWhatTheyMaySee, style: Theme.of(context).textTheme.labelLarge),
+              for (final code in caregiverPermissionCodes)
                 CheckboxRow(
-                  label: permission.$2,
-                  checked: selected.contains(permission.$1),
+                  label: caregiverPermissionLabel(code, l10n),
+                  checked: selected.contains(code),
                   onChanged: (v) => setState(() {
                     if (v) {
-                      selected = [...selected, permission.$1];
+                      selected = [...selected, code];
                     } else {
-                      selected = selected.where((item) => item != permission.$1).toList();
+                      selected = selected.where((item) => item != code).toList();
                     }
                   }),
                 ),
               PrimaryButton(
-                label: 'Send invitation',
+                label: l10n.caregiversSendInvitation,
                 loading: busy,
                 onPressed: () async {
                   if (email.text.trim().isEmpty) {
-                    setState(() => error = "Enter the caregiver's email address.");
+                    setState(() => error = l10n.caregiversEnterEmail);
                     return;
                   }
                   setState(() {
@@ -1678,40 +1678,59 @@ class _CaregiversScreenState extends State<CaregiversScreen> {
         ),
         if (invitationToken != null)
           Callout(
-            title: 'Invitation created',
-            message: 'Share this one-time code with the caregiver so they can accept: $invitationToken',
-            child: Row(
+            title: l10n.caregiversInvitationCreatedTitle,
+            message: l10n.caregiversInvitationCreatedMessage,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: invitationToken!));
-                      showAppSnackBar(context, 'Code copied.');
-                    },
-                    icon: const Icon(Icons.copy_outlined),
-                    label: const Text('Copy code'),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Palette.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Palette.line),
+                  ),
+                  child: SelectableText(
+                    invitationToken!,
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 13, height: 1.4),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => SharePlus.instance.share(ShareParams(text: invitationToken!)),
-                    icon: const Icon(Icons.ios_share),
-                    label: const Text('Share'),
-                  ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: invitationToken!));
+                          showAppSnackBar(context, l10n.commonCodeCopied);
+                        },
+                        icon: const Icon(Icons.copy_outlined),
+                        label: Text(l10n.commonCopyCode),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => SharePlus.instance.share(ShareParams(text: invitationToken!)),
+                        icon: const Icon(Icons.ios_share),
+                        label: Text(l10n.commonShare),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
         if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
-        Text('People with access', style: Theme.of(context).textTheme.titleMedium),
+        Text(l10n.caregiversPeopleWithAccess, style: Theme.of(context).textTheme.titleMedium),
         if (loading)
           const Center(child: CircularProgressIndicator())
         else if (people.isEmpty)
           EmptyState(
             illustration: Image.asset('assets/illustrations/caregiver-share.png', height: 140),
-            title: 'Nobody has access',
-            description: 'Invite someone you trust if you would like them to follow your medication routine.',
+            title: l10n.caregiversEmptyTitle,
+            description: l10n.caregiversEmptyDescription,
           )
         else
           for (final person in people)
@@ -1731,20 +1750,20 @@ class _CaregiversScreenState extends State<CaregiversScreen> {
                         ),
                       ),
                       AppBadge(
-                        label: statusLabel(person.status),
+                        label: statusLabel(person.status, l10n),
                         tone: person.status == 'Active' ? Tone.safe : (person.status == 'Accepted' ? Tone.attention : Tone.neutral),
                       ),
                     ],
                   ),
-                  for (final permission in caregiverPermissions)
+                  for (final code in caregiverPermissionCodes)
                     CheckboxRow(
-                      label: permission.$2,
-                      checked: person.permissions.contains(permission.$1),
+                      label: caregiverPermissionLabel(code, l10n),
+                      checked: person.permissions.contains(code),
                       enabled: person.status == 'Accepted' || person.status == 'Active',
                       onChanged: (v) async {
                         final next = v
-                            ? [...person.permissions, permission.$1]
-                            : person.permissions.where((item) => item != permission.$1).toList();
+                            ? [...person.permissions, code]
+                            : person.permissions.where((item) => item != code).toList();
                         try {
                           await Api.updateCaregiverPermissions(person.id, next);
                           await load();
@@ -1754,16 +1773,16 @@ class _CaregiversScreenState extends State<CaregiversScreen> {
                       },
                     ),
                   DangerButton(
-                    label: 'Remove access',
+                    label: l10n.caregiversRemoveAccess,
                     onPressed: () async {
                       final ok = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
-                          title: const Text('Remove this caregiver?'),
-                          content: Text('${person.displayName ?? person.email} will no longer be able to see your medications or adherence.'),
+                          title: Text(l10n.caregiversRemoveDialogTitle),
+                          content: Text(l10n.caregiversRemoveDialogMessage(person.displayName ?? person.email)),
                           actions: [
-                            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep access')),
-                            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove')),
+                            TextButton(onPressed: () => Navigator.pop(context, false), child: Text(l10n.caregiversKeepAccess)),
+                            TextButton(onPressed: () => Navigator.pop(context, true), child: Text(l10n.commonRemove)),
                           ],
                         ),
                       );
@@ -1823,14 +1842,15 @@ class _SharedWithMeScreenState extends State<SharedWithMeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ScreenScaffold(
       onRefresh: load,
+      showBack: true,
+      title: l10n.profileSharedWithYou,
+      subtitle: l10n.sharedWithMeSubtitle,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Shared with you', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('People who have shared their medications and adherence with you.'),
         SecondaryButton(
-          label: 'I have an invitation code',
+          label: l10n.sharedWithMeHaveCode,
           onPressed: () async {
             final redeemed = await context.push<bool>('/shared-with-me/redeem');
             if (redeemed == true) load();
@@ -1841,10 +1861,10 @@ class _SharedWithMeScreenState extends State<SharedWithMeScreen> {
         else if (error != null)
           ErrorBanner(message: error!, onRetry: load)
         else if (people.isEmpty)
-          const EmptyState(
+          EmptyState(
             icon: Icons.people_outline,
-            title: 'Nobody has shared with you yet',
-            description: 'When someone invites you as a caregiver and you accept their invitation code, they will appear here.',
+            title: l10n.sharedWithMeEmptyTitle,
+            description: l10n.sharedWithMeEmptyDescription,
           )
         else
           for (final person in people)
@@ -1865,9 +1885,9 @@ class _SharedWithMeScreenState extends State<SharedWithMeScreen> {
                               spacing: 6,
                               runSpacing: 6,
                               children: [
-                                for (final permission in caregiverPermissions)
-                                  if (person.permissions.contains(permission.$1))
-                                    AppBadge(label: permission.$2, tone: Tone.info),
+                                for (final code in caregiverPermissionCodes)
+                                  if (person.permissions.contains(code))
+                                    AppBadge(label: caregiverPermissionLabel(code, l10n), tone: Tone.info),
                               ],
                             ),
                           ],
@@ -1905,7 +1925,7 @@ class _RedeemInvitationScreenState extends State<RedeemInvitationScreen> {
   Future<void> _redeem() async {
     final parts = code.text.trim().split('.');
     if (parts.length != 2 || parts.any((p) => p.isEmpty)) {
-      setState(() => error = 'Enter the full invitation code exactly as it was shared with you.');
+      setState(() => error = AppLocalizations.of(context)!.redeemInvalidCode);
       return;
     }
     setState(() {
@@ -1924,14 +1944,15 @@ class _RedeemInvitationScreenState extends State<RedeemInvitationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ScreenScaffold(
+      showBack: true,
+      title: l10n.redeemTitle,
+      subtitle: l10n.redeemSubtitle,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Enter invitation code', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Paste the code the person shared with you to see their medications and adherence. This only works once.'),
-        AppCard(child: LabeledField(label: 'Invitation code', controller: code, hint: 'The code they copied or shared with you')),
+        AppCard(child: LabeledField(label: l10n.redeemCodeLabel, controller: code, hint: l10n.redeemCodeHint)),
         if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
-        PrimaryButton(label: 'Accept invitation', loading: busy, onPressed: _redeem),
+        PrimaryButton(label: l10n.redeemAcceptButton, loading: busy, onPressed: _redeem),
       ],
     );
   }
@@ -1992,26 +2013,27 @@ class _SharedDetailScreenState extends State<SharedDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final noAccessAtAll = !loading && medications == null && adherence == null && error == null;
     return ScreenScaffold(
       onRefresh: load,
+      showBack: true,
+      title: widget.ownerLabel ?? l10n.profileSharedWithYou,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text(widget.ownerLabel ?? 'Shared with you', style: Theme.of(context).textTheme.headlineMedium),
         if (loading)
           const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
         else ...[
           if (error != null) ErrorBanner(message: error!, onRetry: load),
           if (noAccessAtAll)
-            const EmptyState(
+            EmptyState(
               icon: Icons.lock_outline,
-              title: 'Nothing to show yet',
-              description: 'This person has not granted you access to their medications or adherence.',
+              title: l10n.sharedDetailEmptyTitle,
+              description: l10n.sharedDetailEmptyDescription,
             ),
           if (medications != null) ...[
-            Text('Medications', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.sharedDetailMedicationsTitle, style: Theme.of(context).textTheme.titleMedium),
             if (medications!.isEmpty)
-              const EmptyState(icon: Icons.medical_services_outlined, title: 'No medications', description: 'Nothing has been added yet.')
+              EmptyState(icon: Icons.medical_services_outlined, title: l10n.sharedDetailNoMedicationsTitle, description: l10n.sharedDetailNoMedicationsDescription)
             else
               for (final med in medications!)
                 Padding(
@@ -2024,12 +2046,12 @@ class _SharedDetailScreenState extends State<SharedDetailScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(med.displayName, style: Theme.of(context).textTheme.titleMedium),
-                              Text(med.ingredients.isEmpty ? 'No active ingredients recorded' : med.ingredients.map((i) => i.normalizedName).join(', ')),
+                              Text(med.ingredients.isEmpty ? l10n.commonNoIngredientsShort : med.ingredients.map((i) => i.normalizedName).join(', ')),
                             ],
                           ),
                         ),
                         AppBadge(
-                          label: med.isVerified ? 'Verified' : 'Unverified',
+                          label: med.isVerified ? l10n.commonVerified : l10n.commonUnverified,
                           tone: verificationTone(med.verificationStatus),
                           glyph: verificationGlyph(med.verificationStatus),
                         ),
@@ -2040,21 +2062,21 @@ class _SharedDetailScreenState extends State<SharedDetailScreen> {
             const SizedBox(height: 16),
           ],
           if (adherence != null) ...[
-            Text('Adherence — last 7 days', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.sharedDetailAdherenceTitle, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
               children: [
-                AppBadge(label: '${adherence!.takenCount} taken', tone: Tone.safe, glyph: '✓'),
-                AppBadge(label: '${adherence!.skippedCount} skipped', tone: Tone.neutral, glyph: '—'),
-                AppBadge(label: '${adherence!.missedCount} missed', tone: Tone.attention, glyph: '!'),
-                AppBadge(label: '${adherence!.pendingCount} pending', tone: Tone.info, glyph: '•'),
+                AppBadge(label: l10n.commonTakenCount(adherence!.takenCount), tone: Tone.safe, glyph: '✓'),
+                AppBadge(label: l10n.commonSkippedCount(adherence!.skippedCount), tone: Tone.neutral, glyph: '—'),
+                AppBadge(label: l10n.commonMissedCount(adherence!.missedCount), tone: Tone.attention, glyph: '!'),
+                AppBadge(label: l10n.commonPendingCount(adherence!.pendingCount), tone: Tone.info, glyph: '•'),
               ],
             ),
             const SizedBox(height: 12),
             if (adherence!.days.isEmpty)
-              const EmptyState(icon: Icons.calendar_today_outlined, title: 'No doses recorded yet', description: 'Nothing has happened in this window yet.')
+              EmptyState(icon: Icons.calendar_today_outlined, title: l10n.historyEmptyTitle, description: l10n.sharedDetailNoDosesDescription)
             else
               for (final day in adherence!.days)
                 Padding(
@@ -2063,7 +2085,7 @@ class _SharedDetailScreenState extends State<SharedDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(isToday(day.date) ? 'Today' : formatDate(day.date), style: Theme.of(context).textTheme.labelLarge),
+                        Text(isToday(day.date) ? l10n.commonToday : formatDate(day.date), style: Theme.of(context).textTheme.labelLarge),
                         for (final dose in day.doses)
                           Padding(
                             padding: const EdgeInsets.only(top: 6),
@@ -2105,23 +2127,24 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(authProvider).user;
     return ScreenScaffold(
+      showBack: true,
+      title: l10n.profilePersonalInformation,
+      subtitle: l10n.personalInfoSubtitle,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Personal Information', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('How MedGuard greets you and the email on this account.'),
         AppCard(
           child: Column(
             children: [
-              LabeledField(label: 'Name', controller: name),
+              LabeledField(label: l10n.authName, controller: name),
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerLeft,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Email', style: Theme.of(context).textTheme.labelLarge),
+                    Text(l10n.authEmail, style: Theme.of(context).textTheme.labelLarge),
                     const SizedBox(height: 8),
                     Text(user?.email ?? '', style: Theme.of(context).textTheme.bodyLarge),
                   ],
@@ -2132,7 +2155,7 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
         ),
         if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
         PrimaryButton(
-          label: 'Save',
+          label: l10n.commonSave,
           loading: busy,
           onPressed: () async {
             setState(() {
@@ -2141,7 +2164,7 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
             });
             try {
               await ref.read(authProvider.notifier).updateProfile({'displayName': name.text.trim()});
-              if (context.mounted) showAppSnackBar(context, 'Your name was updated.');
+              if (context.mounted) showAppSnackBar(context, AppLocalizations.of(context)!.personalInfoUpdatedSnackbar);
             } catch (e) {
               setState(() => error = describeError(e));
             } finally {
@@ -2206,26 +2229,27 @@ class _HealthInfoScreenState extends State<HealthInfoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (loading) return const ScreenScaffold(children: [BackCircle(), Center(child: CircularProgressIndicator())]);
+    if (loading) return const ScreenScaffold(showBack: true, children: [Center(child: CircularProgressIndicator())]);
+    final l10n = AppLocalizations.of(context)!;
     return ScreenScaffold(
+      showBack: true,
+      title: l10n.profileHealthInformation,
+      subtitle: l10n.healthInfoSubtitle,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Health Information', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Allergies and emergency contact details. These only appear on your emergency card when you switch those fields on.'),
         AppCard(
           child: Column(
             children: [
-              LabeledField(label: 'Allergies', controller: allergies, maxLines: 3, hint: 'Penicillin'),
+              LabeledField(label: l10n.emergencyAllergies, controller: allergies, maxLines: 3, hint: 'Penicillin'),
               const SizedBox(height: 12),
-              LabeledField(label: 'Emergency contact name', controller: contact),
+              LabeledField(label: l10n.emergencyContactName, controller: contact),
               const SizedBox(height: 12),
-              LabeledField(label: 'Emergency contact phone', controller: phone, keyboardType: TextInputType.phone),
+              LabeledField(label: l10n.emergencyContactPhone, controller: phone, keyboardType: TextInputType.phone),
             ],
           ),
         ),
         if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
         PrimaryButton(
-          label: 'Save',
+          label: l10n.commonSave,
           loading: busy,
           onPressed: () async {
             final current = card;
@@ -2245,7 +2269,7 @@ class _HealthInfoScreenState extends State<HealthInfoScreen> {
                     .toUpdateBody(),
               );
               setState(() => card = updated);
-              if (context.mounted) showAppSnackBar(context, 'Your health information was updated.');
+              if (context.mounted) showAppSnackBar(context, AppLocalizations.of(context)!.healthInfoUpdatedSnackbar);
             } catch (e) {
               setState(() => error = describeError(e));
             } finally {
@@ -2271,16 +2295,17 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(authProvider).user;
     return ScreenScaffold(
+      showBack: true,
+      title: l10n.profileAppSettings,
+      subtitle: l10n.appSettingsSubtitle,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('App Settings', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Device lock and how MedGuard behaves on this phone.'),
         AppCard(
           child: ToggleRow(
-            label: 'Biometric app lock',
-            hint: 'Ask for Face ID, fingerprint or the device passcode after the app has been in the background.',
+            label: l10n.appSettingsBiometricLabel,
+            hint: l10n.appSettingsBiometricHint,
             value: user?.biometricLockEnabled ?? false,
             onChanged: busy
                 ? (_) {}
@@ -2296,9 +2321,9 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
                           if (!context.mounted) return;
                           await showDialog<void>(
                             context: context,
-                            builder: (context) => const AlertDialog(
-                              title: Text('Device lock not available'),
-                              content: Text('Set up a passcode, fingerprint or face unlock on this device first, then enable the app lock.'),
+                            builder: (context) => AlertDialog(
+                              title: Text(l10n.appSettingsDeviceLockUnavailableTitle),
+                              content: Text(l10n.appSettingsDeviceLockUnavailableMessage),
                             ),
                           );
                           return;
@@ -2317,17 +2342,17 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Appearance', style: Theme.of(context).textTheme.titleMedium),
+              Text(l10n.settingsAppearance, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 4),
-              const Text('Follow the system setting, or always use light or dark.'),
+              Text(l10n.settingsAppearanceHint),
               const SizedBox(height: 12),
               ValueListenableBuilder<ThemeMode>(
                 valueListenable: AppTheme.modeNotifier,
                 builder: (context, mode, _) => SegmentedButton<ThemeMode>(
-                  segments: const [
-                    ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(Icons.brightness_auto_outlined)),
-                    ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode_outlined)),
-                    ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode_outlined)),
+                  segments: [
+                    ButtonSegment(value: ThemeMode.system, label: Text(l10n.settingsSystem), icon: const Icon(Icons.brightness_auto_outlined)),
+                    ButtonSegment(value: ThemeMode.light, label: Text(l10n.settingsLight), icon: const Icon(Icons.light_mode_outlined)),
+                    ButtonSegment(value: ThemeMode.dark, label: Text(l10n.settingsDark), icon: const Icon(Icons.dark_mode_outlined)),
                   ],
                   selected: {mode},
                   onSelectionChanged: (selection) => AppTheme.setMode(selection.first),
@@ -2340,17 +2365,17 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Language', style: Theme.of(context).textTheme.titleMedium),
+              Text(l10n.settingsLanguage, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 4),
-              const Text("Choose the language MedGuard uses for you. This also changes what's sent to you by email."),
+              Text(l10n.settingsLanguageHint),
               const SizedBox(height: 12),
               ValueListenableBuilder<Locale?>(
                 valueListenable: AppLanguage.localeNotifier,
                 builder: (context, locale, _) => SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'system', label: Text('System')),
-                    ButtonSegment(value: 'en', label: Text('English')),
-                    ButtonSegment(value: 'tr', label: Text('Türkçe')),
+                  segments: [
+                    ButtonSegment(value: 'system', label: Text(l10n.languageSystem)),
+                    ButtonSegment(value: 'en', label: Text(l10n.languageEnglish)),
+                    ButtonSegment(value: 'tr', label: Text(l10n.languageTurkish)),
                   ],
                   selected: {locale?.languageCode ?? 'system'},
                   onSelectionChanged: (selection) async {
@@ -2359,6 +2384,12 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
                     if (code != null) {
                       await ref.read(authProvider.notifier).updateProfile({'preferredLanguage': code});
                     }
+                    // Already-scheduled local notifications (reminders, refill, expiry alerts) were
+                    // rendered in the old language and won't retroactively translate - resync now so
+                    // the ones on the device catch up immediately instead of waiting for the next
+                    // unrelated schedule/data change.
+                    final privacy = ref.read(authProvider).user?.privacyNotificationsEnabled ?? true;
+                    unawaited(Reminders.syncFromServer(privacyMode: privacy));
                   },
                 ),
               ),
@@ -2384,16 +2415,17 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(authProvider).user;
     return ScreenScaffold(
+      showBack: true,
+      title: l10n.profileNotifications,
+      subtitle: l10n.notificationsSubtitle,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Notifications', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('How reminder alerts appear on the lock screen. MedGuard sends a local notification at each confirmed reminder time.'),
         AppCard(
           child: ToggleRow(
-            label: 'Private notifications',
-            hint: 'Lock-screen reminders say “You have a medication reminder” instead of naming the medication.',
+            label: l10n.notificationsPrivateToggle,
+            hint: l10n.notificationsPrivateHint,
             value: user?.privacyNotificationsEnabled ?? true,
             onChanged: busy
                 ? (_) {}
@@ -2424,25 +2456,25 @@ class PrivacySettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ScreenScaffold(
+      showBack: true,
+      title: l10n.profilePrivacy,
+      subtitle: l10n.privacySubtitle,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Privacy', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('How MedGuard treats medication information on this device.'),
-        const AppCard(
+        AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('On this device', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 17)),
-              SizedBox(height: 8),
-              Text('Screenshots are blocked where the platform supports it, and medication content is hidden in the app switcher.'),
+              Text(l10n.privacyOnDeviceTitle, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 17)),
+              const SizedBox(height: 8),
+              Text(l10n.privacyOnDeviceMessage),
             ],
           ),
         ),
-        const Callout(
-          title: 'How MedGuard makes decisions',
-          message:
-              'Safety findings come from deterministic checks against trusted medication data. Plain-language explanations only describe findings that already exist; they never create or dismiss one.',
+        Callout(
+          title: l10n.privacyHowDecisionsTitle,
+          message: l10n.privacyHowDecisionsMessage,
         ),
       ],
     );
@@ -2495,21 +2527,22 @@ class _FindingExplanationScreenState extends State<FindingExplanationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (loading) return const ScreenScaffold(children: [BackCircle(), Center(child: CircularProgressIndicator())]);
+    if (loading) return const ScreenScaffold(showBack: true, children: [Center(child: CircularProgressIndicator())]);
+    final l10n = AppLocalizations.of(context)!;
     final current = finding;
     if (current == null) {
-      return ScreenScaffold(children: [const BackCircle(), ErrorBanner(message: error ?? 'This safety finding is no longer available.', onRetry: load)]);
+      return ScreenScaffold(showBack: true, children: [ErrorBanner(message: error ?? l10n.findingUnavailable, onRetry: load)]);
     }
     return ScreenScaffold(
+      showBack: true,
+      title: l10n.findingWhyTitle,
+      subtitle: current.title,
       children: [
-        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
-        Text('Why am I seeing this?', style: Theme.of(context).textTheme.headlineMedium),
-        Text(current.title),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Why it matters', style: Theme.of(context).textTheme.titleMedium),
+              Text(l10n.findingWhyItMatters, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               for (final med in current.medications) ...[
                 Row(
@@ -2517,33 +2550,35 @@ class _FindingExplanationScreenState extends State<FindingExplanationScreen> {
                     Icon(Icons.circle, size: 8, color: Palette.brand),
                     const SizedBox(width: 8),
                     Expanded(child: Text(med.name, style: const TextStyle(fontWeight: FontWeight.w600))),
-                    AppBadge(label: med.verified ? 'Verified' : 'Unverified', tone: med.verified ? Tone.safe : Tone.neutral, glyph: med.verified ? '✓' : '?'),
+                    AppBadge(label: med.verified ? l10n.commonVerified : l10n.commonUnverified, tone: med.verified ? Tone.safe : Tone.neutral, glyph: med.verified ? '✓' : '?'),
                   ],
                 ),
                 Padding(
                   padding: const EdgeInsets.only(left: 16, bottom: 8),
-                  child: Text('contains ${med.ingredientOriginalName ?? current.ingredient?.name ?? 'this ingredient'}${med.strengthText != null ? ' · ${med.strengthText}' : ''}'),
+                  child: Text(
+                    '${l10n.findingContains(med.ingredientOriginalName ?? current.ingredient?.name ?? l10n.findingThisIngredientFallback)}${med.strengthText != null ? ' · ${med.strengthText}' : ''}',
+                  ),
                 ),
               ],
-              if (explanation != null) Text(explanation!.explanation) else const Text('The explanation is unavailable right now. The finding above stays available and unchanged.'),
+              if (explanation != null) Text(explanation!.explanation) else Text(l10n.findingExplanationUnavailable),
             ],
           ),
         ),
         Callout(
           tone: findingTone(current.severity),
-          title: 'What you can do',
-          message: explanation?.disclaimer ?? 'Review the medication labels and confirm with a pharmacist or healthcare professional if you are unsure.',
+          title: l10n.findingWhatYouCanDo,
+          message: explanation?.disclaimer ?? l10n.findingDisclaimerFallback,
         ),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Sources', style: Theme.of(context).textTheme.titleMedium),
-              FieldRow(label: 'Data source', value: current.source),
-              FieldRow(label: 'Dataset version', value: current.datasetVersion),
-              FieldRow(label: 'Last checked', value: formatDateTime(current.detectedAt)),
-              FieldRow(label: 'Verification', value: current.verified ? 'Verified against trusted data' : 'Not independently verified'),
-              FieldRow(label: 'Explanation', value: explanation?.generatedByAi == true ? 'AI explanation' : explanation?.source ?? 'Standard explanation', divider: false),
+              Text(l10n.findingSourcesTitle, style: Theme.of(context).textTheme.titleMedium),
+              FieldRow(label: l10n.findingDataSource, value: current.source),
+              FieldRow(label: l10n.commonDatasetVersion, value: current.datasetVersion),
+              FieldRow(label: l10n.findingLastChecked, value: formatDateTime(current.detectedAt)),
+              FieldRow(label: l10n.findingVerificationLabel, value: current.verified ? l10n.findingVerifiedAgainstData : l10n.findingNotIndependentlyVerified),
+              FieldRow(label: l10n.findingExplanationLabel, value: explanation?.generatedByAi == true ? l10n.findingAiExplanation : explanation?.source ?? l10n.findingStandardExplanation, divider: false),
             ],
           ),
         ),
