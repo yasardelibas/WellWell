@@ -1,4 +1,4 @@
-# MedGuard
+# WellWell
 
 A safety layer between the medication label and the person taking it.
 
