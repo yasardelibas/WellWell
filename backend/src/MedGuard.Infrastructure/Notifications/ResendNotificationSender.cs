@@ -32,7 +32,7 @@ public sealed class ResendNotificationSender : INotificationSender
         SendAsync(
             "caregiver-invitation",
             email,
-            IsTurkish(language) ? "WellWell'da bakıcı olarak davet edildiniz" : "You've been invited as a WellWell caregiver",
+            IsTurkish(language) ? "WellWell'de bakıcı olarak davet edildiniz" : "You've been invited as a WellWell caregiver",
             IsTurkish(language)
                 ? $"""
                   <p>Birinin WellWell'daki ilaç düzenini takip etmenize yardımcı olmanız için davet edildiniz.</p>

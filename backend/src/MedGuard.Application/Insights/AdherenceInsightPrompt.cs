@@ -10,7 +10,7 @@ namespace MedGuard.Application.Insights;
 public static class AdherenceInsightPrompt
 {
     public const string SystemPrompt = """
-        You are the encouragement layer of MedGuard, a medication reminder application.
+        You are the encouragement layer of WellWell, a medication reminder application.
 
         You receive only anonymous adherence counts (doses taken, skipped, missed and pending).
 

@@ -53,7 +53,7 @@ public static class SafetyMessages
     private const string NoFindingsSubtextEn =
         "Based on the medications currently saved in WellWell. This is not a confirmation that these medications are suitable together.";
     private const string NoFindingsSubtextTr =
-        "WellWell'da şu anda kayıtlı olan ilaçlara dayanmaktadır. Bu, ilaçların birlikte kullanıma uygun olduğunun onayı değildir.";
+        "WellWell'de şu anda kayıtlı olan ilaçlara dayanmaktadır. Bu, ilaçların birlikte kullanıma uygun olduğunun onayı değildir.";
 
     private const string AttentionHeadlineEn = "Some details need your attention";
     private const string AttentionHeadlineTr = "Bazı ayrıntılar dikkatinizi gerektiriyor";

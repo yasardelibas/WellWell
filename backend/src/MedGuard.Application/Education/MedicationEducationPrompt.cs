@@ -14,7 +14,7 @@ public static class MedicationEducationPrompt
 
     public const string SystemPrompt =
         """
-        You are the education layer of MedGuard, a medication information app.
+        You are the education layer of WellWell, a medication information app.
 
         You receive the name of a medication, its active ingredients, and (when available)
         authoritative known uses and therapeutic class from a trusted drug database. Your job
