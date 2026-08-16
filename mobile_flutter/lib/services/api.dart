@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:ui' show PlatformDispatcher;
 
 import 'package:dio/dio.dart';
 
@@ -41,10 +40,24 @@ const _errorMessagesByCodeTr = {
   'invitation_expired': 'Bu davet artık geçerli değil.',
   'invitation_mismatch': 'Bu davet farklı bir e-posta adresine gönderilmişti.',
   'caregiver_not_found': 'Bu kişi hesabınıza bağlı bir bakıcı değil.',
+  'card_not_available': 'Bu acil durum kartı kullanılamıyor.',
+  'demo_disabled': 'Demo hesabı şu anda kullanılamıyor.',
+  'dose_not_found': 'Bu doz artık mevcut değil.',
+  'image_too_large': 'Çekilen görüntü çok büyük. Lütfen tekrar deneyin.',
+  'incorrect_code': 'Bu kod doğru değil.',
+  'invalid_caregiver': 'Kendinizi bakıcı olarak davet edemezsiniz.',
+  'invalid_image': 'Çekilen görüntü okunamadı.',
+  'invalid_or_expired_code': 'Yeni bir kod isteyip tekrar deneyin.',
+  'invalid_range': 'Başlangıç tarihi bitiş tarihinden önce olmalı.',
+  'invalid_reset_token': 'Bu sıfırlama bağlantısı artık geçerli değil.',
+  'nothing_to_read': 'Bir görüntü veya etiket metni girin.',
+  'permission_denied': 'Bu bilgiye erişiminiz yok.',
+  'scan_already_handled': 'Bu tarama zaten onaylandı veya reddedildi.',
+  'scan_not_found': 'Bu tarama artık mevcut değil. Lütfen tekrar tarayın.',
+  'schedule_not_found': 'Bu hatırlatma artık mevcut değil.',
 };
 
-String _currentLanguageCode() =>
-    AppLanguage.localeNotifier.value?.languageCode ?? PlatformDispatcher.instance.locale.languageCode;
+String _currentLanguageCode() => AppLanguage.currentCode;
 
 String describeError(Object error) {
   if (error is ApiException) {

@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../theme/palette.dart';
 
 /// A themed date picker presented as a rounded bottom sheet with a Cupertino
@@ -11,7 +12,7 @@ Future<DateTime?> showBrandDatePicker({
   required DateTime initialDate,
   required DateTime firstDate,
   required DateTime lastDate,
-  String title = 'Select date',
+  String? title,
 }) {
   // Clamp so the wheel never starts outside the allowed range (Cupertino asserts on this).
   DateTime clamp(DateTime value) {
@@ -26,6 +27,7 @@ Future<DateTime?> showBrandDatePicker({
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
     builder: (sheetContext) {
+      final l10n = AppLocalizations.of(sheetContext)!;
       return Container(
         decoration: BoxDecoration(
           color: Palette.surface,
@@ -51,19 +53,19 @@ Future<DateTime?> showBrandDatePicker({
                   children: [
                     Expanded(
                       child: Text(
-                        title,
+                        title ?? l10n.pickerSelectDate,
                         style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Palette.ink),
                       ),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(sheetContext),
-                      child: Text('Cancel', style: TextStyle(color: Palette.inkMuted)),
+                      child: Text(l10n.commonCancel, style: TextStyle(color: Palette.inkMuted)),
                     ),
                     const SizedBox(width: 4),
                     FilledButton(
                       style: FilledButton.styleFrom(backgroundColor: Palette.brand),
                       onPressed: () => Navigator.pop(sheetContext, temp),
-                      child: const Text('Done'),
+                      child: Text(l10n.commonDone),
                     ),
                   ],
                 ),
@@ -95,7 +97,7 @@ Future<DateTime?> showBrandDatePicker({
 Future<String?> showBrandTimePicker({
   required BuildContext context,
   required String initialTime,
-  String title = 'Reminder time',
+  String? title,
 }) {
   final parts = initialTime.split(':');
   final hour = (parts.isNotEmpty ? int.tryParse(parts[0]) ?? 8 : 8).clamp(0, 23);
@@ -111,6 +113,7 @@ Future<String?> showBrandTimePicker({
     backgroundColor: Colors.transparent,
     isScrollControlled: true,
     builder: (sheetContext) {
+      final l10n = AppLocalizations.of(sheetContext)!;
       return Container(
         decoration: BoxDecoration(
           color: Palette.surface,
@@ -139,11 +142,11 @@ Future<String?> showBrandTimePicker({
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            title,
+                            title ?? l10n.pickerReminderTime,
                             style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Palette.ink),
                           ),
                           Text(
-                            'Repeats every day at this time.',
+                            l10n.pickerRepeatsDaily,
                             style: TextStyle(color: Palette.inkMuted, fontSize: 12),
                           ),
                         ],
@@ -151,13 +154,13 @@ Future<String?> showBrandTimePicker({
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(sheetContext),
-                      child: Text('Cancel', style: TextStyle(color: Palette.inkMuted)),
+                      child: Text(l10n.commonCancel, style: TextStyle(color: Palette.inkMuted)),
                     ),
                     const SizedBox(width: 4),
                     FilledButton(
                       style: FilledButton.styleFrom(backgroundColor: Palette.brand),
                       onPressed: () => Navigator.pop(sheetContext, format(temp)),
-                      child: const Text('Done'),
+                      child: Text(l10n.commonDone),
                     ),
                   ],
                 ),
@@ -383,7 +386,7 @@ class VerifyRoleChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        used ? 'Used to verify' : 'Not used to verify',
+        used ? AppLocalizations.of(context)!.commonUsedToVerify : AppLocalizations.of(context)!.commonNotUsedToVerify,
         style: TextStyle(
           fontSize: 11,
           fontWeight: FontWeight.w600,
@@ -541,8 +544,8 @@ class SegmentedAuth extends StatelessWidget {
       decoration: BoxDecoration(color: Palette.surfaceMuted, borderRadius: BorderRadius.circular(999)),
       child: Row(
         children: [
-          _chip('Log In', signIn, () => onChanged(true)),
-          _chip('Sign Up', !signIn, () => onChanged(false)),
+          _chip(AppLocalizations.of(context)!.authTabLogIn, signIn, () => onChanged(true)),
+          _chip(AppLocalizations.of(context)!.authTabSignUp, !signIn, () => onChanged(false)),
         ],
       ),
     );
@@ -607,7 +610,7 @@ class CircularProgressRing extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('$percent%', style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700)),
-              Text('complete', style: TextStyle(color: Palette.inkSubtle, fontSize: 12)),
+              Text(AppLocalizations.of(context)!.progressComplete, style: TextStyle(color: Palette.inkSubtle, fontSize: 12)),
             ],
           ),
         ],
@@ -826,11 +829,12 @@ class ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Callout(
       tone: Tone.critical,
-      title: 'Something went wrong',
+      title: l10n.commonSomethingWentWrong,
       message: message,
-      child: onRetry == null ? null : SecondaryButton(label: 'Try again', onPressed: onRetry),
+      child: onRetry == null ? null : SecondaryButton(label: l10n.commonTryAgain, onPressed: onRetry),
     );
   }
 }
@@ -957,25 +961,41 @@ void showAppSnackBar(BuildContext context, String message, {String? actionLabel,
     );
 }
 
-String greeting() {
+String greeting(BuildContext context) {
+  final l10n = AppLocalizations.of(context)!;
   final hour = DateTime.now().hour;
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return l10n.greetingMorning;
+  if (hour < 18) return l10n.greetingAfternoon;
+  return l10n.greetingEvening;
 }
 
 String initials(String name) {
   final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).take(2);
-  if (parts.isEmpty) return 'MG';
+  if (parts.isEmpty) return 'WW';
   return parts.map((p) => p[0].toUpperCase()).join();
 }
 
-const caregiverPermissions = [
-  ('VIEW_MEDICATION_LIST', 'See the medication list'),
-  ('VIEW_ADHERENCE', 'See taken and missed doses'),
-  ('VIEW_SCHEDULE', 'See reminder times'),
-  ('RECEIVE_MISSED_DOSE_ALERT', 'Be alerted about missed doses'),
+const caregiverPermissionCodes = [
+  'VIEW_MEDICATION_LIST',
+  'VIEW_ADHERENCE',
+  'VIEW_SCHEDULE',
+  'RECEIVE_MISSED_DOSE_ALERT',
 ];
+
+String caregiverPermissionLabel(String code, AppLocalizations l10n) {
+  switch (code) {
+    case 'VIEW_MEDICATION_LIST':
+      return l10n.caregiverPermViewMedications;
+    case 'VIEW_ADHERENCE':
+      return l10n.caregiverPermViewAdherence;
+    case 'VIEW_SCHEDULE':
+      return l10n.caregiverPermViewSchedule;
+    case 'RECEIVE_MISSED_DOSE_ALERT':
+      return l10n.caregiverPermMissedAlerts;
+    default:
+      return code;
+  }
+}
 
 const demoLabel = '''PAROL
 Paracetamol 500 mg

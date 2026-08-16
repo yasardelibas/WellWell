@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../models/models.dart';
 import '../services/api.dart';
 import '../state/auth.dart';
@@ -60,10 +61,12 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
-        setState(() {
-          starting = false;
-          error = 'No camera is available on this device.';
-        });
+        if (mounted) {
+          setState(() {
+            starting = false;
+            error = AppLocalizations.of(context)!.scanNoCameraAvailable;
+          });
+        }
         return;
       }
       final back = cameras.firstWhere(
@@ -86,11 +89,12 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         starting = false;
       });
     } on CameraException catch (e) {
+      if (!mounted) return;
       setState(() {
         starting = false;
         permissionDenied = e.code.toLowerCase().contains('denied') || e.code.toLowerCase().contains('access');
         error = permissionDenied
-            ? 'Camera access is needed to read labels.'
+            ? AppLocalizations.of(context)!.scanCameraAccessNeededError
             : (e.description ?? e.code);
       });
     } catch (e) {
@@ -177,6 +181,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final controller = _camera;
     final ready = controller != null && controller.value.isInitialized;
 
@@ -191,15 +196,13 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
               children: [
                 Icon(Icons.camera_alt_outlined, size: 36, color: Palette.brand),
                 const SizedBox(height: 16),
-                Text('Camera access is needed to read labels', style: Theme.of(context).textTheme.headlineMedium),
+                Text(l10n.scanCameraAccessHeadline, style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: 8),
-                const Text(
-                  'WellWell reads the medication name and ingredients from the label. The photo is processed to extract text and is not stored.',
-                ),
+                Text(l10n.scanCameraAccessMessage),
                 const Spacer(),
-                PrimaryButton(label: 'Allow camera access', onPressed: _startCamera),
+                PrimaryButton(label: l10n.scanAllowCameraAccess, onPressed: _startCamera),
                 const SizedBox(height: 12),
-                SecondaryButton(label: 'Enter label text instead', onPressed: () => context.push('/scan/manual')),
+                SecondaryButton(label: l10n.scanEnterLabelTextInstead, onPressed: () => context.push('/scan/manual')),
               ],
             ),
           ),
@@ -223,33 +226,33 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
               padding: const EdgeInsets.fromLTRB(28, 16, 28, 16),
               child: Column(
                 children: [
-                  const Text(
-                    'Scan medication label',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                  Text(
+                    l10n.scanHeaderTitle,
+                    style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Place the medication name and ingredients inside the frame.',
+                  Text(
+                    l10n.scanHeaderSubtitle,
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70),
+                    style: const TextStyle(color: Colors.white70),
                   ),
                   const Expanded(child: Center(child: _ScanFrame())),
                   if (busy)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-                          SizedBox(width: 8),
-                          Text('Reading the label…', style: TextStyle(color: Colors.white)),
+                          const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                          const SizedBox(width: 8),
+                          Text(l10n.scanReadingLabel, style: const TextStyle(color: Colors.white)),
                         ],
                       ),
                     )
                   else if (starting)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
-                      child: Text('Opening camera…', style: TextStyle(color: Colors.white70)),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(l10n.scanOpeningCamera, style: const TextStyle(color: Colors.white70)),
                     ),
                   if (error != null)
                     Padding(
@@ -281,9 +284,9 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                   ),
                   TextButton(
                     onPressed: () => context.push('/scan/manual'),
-                    child: const Text(
-                      'Type the label text instead',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    child: Text(
+                      l10n.scanTypeLabelInstead,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -411,7 +414,7 @@ class _ManualScanScreenState extends ConsumerState<ManualScanScreen> {
 
   Future<void> submit() async {
     if (controller.text.trim().isEmpty) {
-      setState(() => error = 'Type the text printed on the label first.');
+      setState(() => error = AppLocalizations.of(context)!.manualScanEmptyError);
       return;
     }
     setState(() {
@@ -431,25 +434,26 @@ class _ManualScanScreenState extends ConsumerState<ManualScanScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final demo = ref.watch(authProvider).user?.isDemoAccount == true;
     return ScreenScaffold(
       showBack: true,
-      title: 'Type the label text',
-      subtitle: 'Copy the medication name, the active ingredients and the directions exactly as printed. WellWell matches them against trusted medication data and you confirm the result.',
+      title: l10n.manualScanTitle,
+      subtitle: l10n.manualScanSubtitle,
       children: [
         TextField(
           controller: controller,
           maxLines: 8,
-          decoration: const InputDecoration(hintText: 'Brand name\nActive ingredient 500 mg\nDirections'),
+          decoration: InputDecoration(hintText: l10n.manualScanHint),
         ),
         if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
         if (demo)
           Callout(
-            title: 'Demo walkthrough',
-            message: 'Use the sample Parol label to see a verified match.',
-            child: SecondaryButton(label: 'Use the sample label', onPressed: () => setState(() => controller.text = demoLabel)),
+            title: l10n.manualScanDemoTitle,
+            message: l10n.manualScanDemoMessage,
+            child: SecondaryButton(label: l10n.manualScanUseSampleButton, onPressed: () => setState(() => controller.text = demoLabel)),
           ),
-        PrimaryButton(label: 'Continue', loading: busy, onPressed: submit),
+        PrimaryButton(label: l10n.commonContinue, loading: busy, onPressed: submit),
       ],
     );
   }
@@ -554,13 +558,14 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final current = scan;
     if (current == null) {
       return ScreenScaffold(
         showBack: true,
         children: [
-          const Callout(title: 'Nothing to review', message: 'Scan a medication label to see the extracted details.'),
-          PrimaryButton(label: 'Open the scanner', onPressed: () => context.go('/scan')),
+          Callout(title: l10n.scanReviewNothingTitle, message: l10n.scanReviewNothingMessage),
+          PrimaryButton(label: l10n.scanOpenScanner, onPressed: () => context.go('/scan')),
         ],
       );
     }
@@ -569,9 +574,9 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
       return ScreenScaffold(
         showBack: true,
         children: [
-          Callout(tone: Tone.attention, title: "We couldn't read the label clearly", message: current.message),
-          PrimaryButton(label: 'Try again', onPressed: () => context.go('/scan')),
-          SecondaryButton(label: 'Enter the details manually', onPressed: () => context.replace('/medication/new')),
+          Callout(tone: Tone.attention, title: l10n.scanExtractionFailedTitle, message: current.message),
+          PrimaryButton(label: l10n.commonTryAgain, onPressed: () => context.go('/scan')),
+          SecondaryButton(label: l10n.scanEnterDetailsManually, onPressed: () => context.replace('/medication/new')),
         ],
       );
     }
@@ -581,33 +586,30 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
 
     return ScreenScaffold(
       showBack: true,
-      title: 'Scan result',
+      title: l10n.scanResultTitleGeneric,
       subtitle: current.message,
       children: [
         if (low)
           Callout(
             tone: Tone.attention,
-            title: 'Please review the details',
-            message:
-                'The label was read with ${formatConfidence(current.extractionConfidence)} confidence. Check every field against the label before confirming.',
+            title: l10n.scanReviewLowConfidenceTitle,
+            message: l10n.scanReviewLowConfidenceMessage(formatConfidence(current.extractionConfidence)),
           ),
         AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Used to verify', style: Theme.of(context).textTheme.titleMedium),
+              Text(l10n.commonUsedToVerify, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 4),
-              const Text(
-                'WellWell matches these fields against a trusted medication database. Edit them if the scan misread the label.',
-              ),
+              Text(l10n.scanUsedToVerifyMessage),
               const SizedBox(height: 12),
-              LabeledField(label: 'Brand name', controller: brand, hint: 'As printed on the box', usedForVerification: true),
+              LabeledField(label: l10n.commonBrandName, controller: brand, hint: l10n.newMedHintAsPrinted, usedForVerification: true),
               const SizedBox(height: 12),
-              LabeledField(label: 'Generic name', controller: generic, usedForVerification: true),
+              LabeledField(label: l10n.commonGenericName, controller: generic, usedForVerification: true),
               const SizedBox(height: 12),
-              LabeledField(label: 'Strength', controller: strength, hint: '500 mg', usedForVerification: true),
+              LabeledField(label: l10n.commonStrength, controller: strength, hint: '500 mg', usedForVerification: true),
               const SizedBox(height: 12),
-              LabeledField(label: 'Dosage form', controller: form, hint: 'Tablet', usedForVerification: true),
+              LabeledField(label: l10n.commonDosageForm, controller: form, usedForVerification: true),
               const SizedBox(height: 12),
               IngredientEditor(
                 key: ValueKey(selectedRxCui ?? 'extracted'),
@@ -621,15 +623,15 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('On the label only', style: Theme.of(context).textTheme.titleMedium),
+              Text(l10n.commonOnTheLabelOnly, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 4),
-              const Text('These stay as you entered them. They are not used to verify the product.'),
+              Text(l10n.scanOnLabelOnlyMessage),
               const SizedBox(height: 12),
-              LabeledField(label: 'Route', controller: route, hint: 'Oral', usedForVerification: false),
+              LabeledField(label: l10n.commonRoute, controller: route, usedForVerification: false),
               const SizedBox(height: 12),
-              LabeledField(label: 'Label directions', controller: directions, maxLines: 3, usedForVerification: false),
+              LabeledField(label: l10n.commonLabelDirections, controller: directions, maxLines: 3, usedForVerification: false),
               const SizedBox(height: 12),
-              Text('Expiration date', style: Theme.of(context).textTheme.labelLarge),
+              Text(l10n.medDetailExpirationPickerTitle, style: Theme.of(context).textTheme.labelLarge),
               const SizedBox(height: 8),
               InkWell(
                 onTap: () async {
@@ -639,7 +641,7 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
                     initialDate: expirationDate ?? now,
                     firstDate: DateTime(now.year - 1),
                     lastDate: DateTime(now.year + 15),
-                    title: 'Expiration date',
+                    title: l10n.medDetailExpirationPickerTitle,
                   );
                   if (picked != null) setState(() => expirationDate = picked);
                 },
@@ -647,7 +649,7 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
                   decoration: const InputDecoration(suffixIcon: Icon(Icons.calendar_today_outlined)),
                   child: Text(
                     expirationDate == null
-                        ? 'Not set'
+                        ? l10n.commonNotSet
                         : formatDate(
                             '${expirationDate!.year.toString().padLeft(4, '0')}-${expirationDate!.month.toString().padLeft(2, '0')}-${expirationDate!.day.toString().padLeft(2, '0')}',
                           ),
@@ -661,21 +663,21 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Verification', style: Theme.of(context).textTheme.titleMedium),
+              Text(l10n.scanVerificationTitle, style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               if (verified) ...[
-                const AppBadge(label: 'Verified', tone: Tone.safe, glyph: '✓'),
+                AppBadge(label: l10n.commonVerified, tone: Tone.safe, glyph: '✓'),
                 if (current.candidates.firstOrNull?.provenance != null)
                   Text(
-                    'Source: ${current.candidates.first.provenance.provider}${current.candidates.first.provenance.datasetVersion != null ? ' · dataset ${current.candidates.first.provenance.datasetVersion}' : ''}',
+                    current.candidates.first.provenance.datasetVersion != null
+                        ? l10n.scanSourceProviderDataset(current.candidates.first.provenance.provider, current.candidates.first.provenance.datasetVersion!)
+                        : l10n.scanSourceProviderOnly(current.candidates.first.provenance.provider),
                     style: Theme.of(context).textTheme.labelSmall,
                   ),
               ] else ...[
-                const AppBadge(label: 'Not independently verified', tone: Tone.attention, glyph: '?'),
+                AppBadge(label: l10n.medDetailUnverifiedTitle, tone: Tone.attention, glyph: '?'),
                 const SizedBox(height: 8),
-                const Text(
-                  'WellWell could not confirm this product against its medication data source. You can still save it, and it will stay marked as unverified.',
-                ),
+                Text(l10n.scanUnverifiedExplanation),
               ],
             ],
           ),
@@ -685,8 +687,8 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Candidate matches', style: Theme.of(context).textTheme.titleMedium),
-                const Text('Choose the product that matches the label in your hand.'),
+                Text(l10n.scanCandidateMatchesTitle, style: Theme.of(context).textTheme.titleMedium),
+                Text(l10n.scanCandidateMatchesSubtitle),
                 const SizedBox(height: 8),
                 for (final candidate in current.candidates)
                   Padding(
@@ -719,7 +721,7 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
                                   .where((v) => v.isNotEmpty)
                                   .join(' · '),
                             ),
-                            Text('Match ${formatConfidence(candidate.matchScore)} · ${candidate.provenance.provider}', style: Theme.of(context).textTheme.labelSmall),
+                            Text(l10n.scanCandidateMatchLine(formatConfidence(candidate.matchScore), candidate.provenance.provider), style: Theme.of(context).textTheme.labelSmall),
                           ],
                         ),
                       ),
@@ -731,10 +733,10 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
         if (needsAck)
           Callout(
             tone: Tone.attention,
-            title: 'Save as unverified?',
+            title: l10n.scanSaveUnverifiedTitle,
             message: error ?? '',
             child: CheckboxRow(
-              label: 'I understand this medication is not independently verified and I checked the details against the label.',
+              label: l10n.scanSaveUnverifiedCheckbox,
               checked: ack,
               onChanged: (v) => setState(() => ack = v),
             ),
@@ -742,11 +744,11 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
         else if (error != null)
           Text(error!, style: TextStyle(color: Palette.critical)),
         PrimaryButton(
-          label: needsAck ? 'Save as unverified' : 'Confirm Medication',
+          label: needsAck ? l10n.scanSaveAsUnverifiedButton : l10n.scanConfirmMedicationButton,
           loading: busy,
           onPressed: needsAck && !ack ? null : () => confirm(needsAck ? ack : false),
         ),
-        GhostButton(label: 'Scan again', onPressed: () => context.go('/scan')),
+        GhostButton(label: l10n.scanAgainButton, onPressed: () => context.go('/scan')),
       ],
     );
   }
@@ -801,20 +803,21 @@ class ScanResultScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final outcome = scanHolder.outcome;
     if (outcome == null) {
       return ScreenScaffold(
         children: [
-          const Callout(title: 'Nothing to show', message: 'Scan and confirm a medication to see its safety result.'),
-          PrimaryButton(label: 'Open the scanner', onPressed: () => context.go('/scan')),
+          Callout(title: l10n.scanResultNothingTitle, message: l10n.scanResultNothingMessage),
+          PrimaryButton(label: l10n.scanOpenScanner, onPressed: () => context.go('/scan')),
         ],
       );
     }
     final medication = outcome.medication;
     final safety = outcome.safety;
     return ScreenScaffold(
-      title: '${medication.displayName} was saved',
-      subtitle: 'WellWell checked it against the medications already in your list.',
+      title: l10n.scanResultSavedTitle(medication.displayName),
+      subtitle: l10n.scanResultSubtitle,
       children: [
         SafetySummaryCard(analysis: safety),
         ...safety.findings.map((f) => FindingCard(finding: f)),
@@ -824,7 +827,7 @@ class ScanResultScreen extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Expanded(child: Text('Saved medication', style: Theme.of(context).textTheme.titleMedium)),
+                  Expanded(child: Text(l10n.scanResultSavedMedicationTitle, style: Theme.of(context).textTheme.titleMedium)),
                   AppBadge(
                     label: medication.verificationLabel,
                     tone: verificationTone(medication.verificationStatus),
@@ -832,22 +835,22 @@ class ScanResultScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              FieldRow(label: 'Brand', value: medication.brandName),
-              FieldRow(label: 'Generic name', value: medication.genericName),
+              FieldRow(label: l10n.commonBrand, value: medication.brandName),
+              FieldRow(label: l10n.commonGenericName, value: medication.genericName),
               FieldRow(
-                label: 'Active ingredients',
+                label: l10n.commonActiveIngredients,
                 value: medication.ingredients.map((i) => '${i.normalizedName} ${i.displayStrength}'.trim()).join('\n'),
               ),
-              FieldRow(label: 'Label directions', value: medication.labelDirections, divider: false),
+              FieldRow(label: l10n.commonLabelDirections, value: medication.labelDirections, divider: false),
             ],
           ),
         ),
         SafetyChecksCard(analysis: safety),
         if (outcome.scheduleSuggestion != null)
-          PrimaryButton(label: 'Create reminders from the label', onPressed: () => context.replace('/schedule/${medication.id}')),
-        SecondaryButton(label: 'View medication', onPressed: () => context.replace('/medication/${medication.id}')),
+          PrimaryButton(label: l10n.scanResultCreateReminders, onPressed: () => context.replace('/schedule/${medication.id}')),
+        SecondaryButton(label: l10n.scanResultViewMedication, onPressed: () => context.replace('/medication/${medication.id}')),
         GhostButton(
-          label: 'Back to home',
+          label: l10n.scanResultBackToHome,
           onPressed: () {
             scanHolder.scan = null;
             scanHolder.outcome = null;

@@ -54,7 +54,7 @@ public static class AdherenceEndpoints
 
         return Results.Ok(new TodayScheduleResponse(
             today,
-            doses.Select(dose => dose.ToResponse(timeZone)).ToList(),
+            doses.Select(dose => dose.ToResponse(timeZone, user.PreferredLanguage)).ToList(),
             completed,
             total,
             ProgressLabel(completed, total, user.PreferredLanguage)));
@@ -115,7 +115,7 @@ public static class AdherenceEndpoints
             .OrderByDescending(group => group.Key)
             .Select(group => new AdherenceDayResponse(
                 group.Key,
-                group.Select(dose => dose.ToResponse(timeZone)).ToList()))
+                group.Select(dose => dose.ToResponse(timeZone, user.PreferredLanguage)).ToList()))
             .ToList();
 
         return Results.Ok(new AdherenceHistoryResponse(
@@ -422,6 +422,6 @@ public static class AdherenceEndpoints
         var user = await dbContext.Users.FirstAsync(item => item.Id == userId, cancellationToken);
         var timeZone = DoseEventService.ResolveTimeZone(user.TimeZoneId);
 
-        return Results.Ok(dose.ToResponse(timeZone));
+        return Results.Ok(dose.ToResponse(timeZone, user.PreferredLanguage));
     }
 }

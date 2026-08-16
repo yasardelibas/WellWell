@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' show Locale;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -6,8 +7,15 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../l10n/generated/app_localizations.dart';
+import '../l10n/language_controller.dart';
 import '../models/models.dart';
 import 'api.dart';
+
+// Local notifications are scheduled ahead of time (sometimes weeks, for expiry alerts) with no
+// BuildContext available, so they can't use AppLocalizations.of(context) like the rest of the
+// app - this resolves the same AppLocalizations instance from the current app language directly.
+AppLocalizations _l10n() => lookupAppLocalizations(Locale(AppLanguage.currentCode));
 
 class ReminderSyncResult {
   const ReminderSyncResult({required this.scheduledCount, required this.permissionGranted});
@@ -108,14 +116,15 @@ class Reminders {
       final minute = int.tryParse(parts[1]);
       if (hour == null || minute == null) continue;
 
+      final l10n = _l10n();
       final body = privacyMode
-          ? 'You have a medication reminder.'
+          ? l10n.reminderNotificationPrivacyBody
           : [schedule.medicationName, schedule.doseAmountText].whereType<String>().where((v) => v.isNotEmpty).join(' · ');
 
       await _plugin.zonedSchedule(
         id: schedule.id.hashCode & 0x7fffffff,
-        title: 'Medication reminder',
-        body: body.isEmpty ? 'You have a medication reminder.' : body,
+        title: l10n.reminderNotificationTitle,
+        body: body.isEmpty ? l10n.reminderNotificationPrivacyBody : body,
         scheduledDate: _nextInstance(hour, minute),
         payload: schedule.medicationId,
         notificationDetails: NotificationDetails(
@@ -168,13 +177,14 @@ class Reminders {
             .add(const Duration(days: 1));
       }
 
+      final l10n = _l10n();
       final body = privacyMode
-          ? 'One of your medications is running low. Time to refill.'
-          : 'You have about $daysLeft ${daysLeft == 1 ? 'day' : 'days'} of ${med.displayName} left. Time to refill.';
+          ? l10n.reminderRefillPrivacyBody
+          : l10n.reminderRefillBody(daysLeft, med.displayName);
 
       await _plugin.zonedSchedule(
         id: (med.id.hashCode ^ 0x5A5A5A5A) & 0x7fffffff,
-        title: 'Refill reminder',
+        title: l10n.reminderRefillNotificationTitle,
         body: body,
         scheduledDate: scheduled,
         payload: med.id,
@@ -221,12 +231,13 @@ class Reminders {
         leadAt = tz.TZDateTime(tz.local, now.year, now.month, now.day, 9, 0).add(const Duration(days: 1));
       }
       if (leadAt.isAfter(now)) {
+        final l10n = _l10n();
         final body = privacyMode
-            ? 'One of your medications is expiring soon.'
-            : '${med.displayName} expires on $dateLabel.';
+            ? l10n.reminderExpiringSoonPrivacyBody
+            : l10n.reminderExpiringSoonBody(med.displayName, dateLabel);
         await _plugin.zonedSchedule(
           id: (med.id.hashCode ^ 0x3C3C3C3C) & 0x7fffffff,
-          title: 'Expiring soon',
+          title: l10n.reminderExpiringSoonTitle,
           body: body,
           scheduledDate: leadAt,
           payload: med.id,
@@ -238,12 +249,13 @@ class Reminders {
       // 2) "Expired" — on the expiration day at 09:00. Only scheduled when that moment is
       // still in the future; we don't fire retroactive alerts for long-expired items.
       if (expiryMorning.isAfter(now)) {
+        final l10n = _l10n();
         final body = privacyMode
-            ? 'One of your medications has expired.'
-            : '${med.displayName} expired on $dateLabel. Check the label and ask your pharmacist before using it.';
+            ? l10n.reminderExpiredPrivacyBody
+            : l10n.reminderExpiredBody(med.displayName, dateLabel);
         await _plugin.zonedSchedule(
           id: (med.id.hashCode ^ 0x5A5A5A5A) & 0x7fffffff,
-          title: 'Expired',
+          title: l10n.reminderExpiredTitle,
           body: body,
           scheduledDate: expiryMorning,
           payload: med.id,

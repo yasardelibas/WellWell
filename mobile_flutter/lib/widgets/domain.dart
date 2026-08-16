@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../models/models.dart';
 import '../theme/palette.dart';
 import '../utils/format.dart';
@@ -24,16 +25,16 @@ class DoseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final actionable = dose.status == 'pending' || dose.status == 'snoozed';
     final due = DateTime.tryParse(dose.scheduledAt)?.isBefore(DateTime.now()) ?? false;
     late final String label;
     late final Tone tone;
     if (dose.status == 'pending' || dose.status == 'snoozed') {
-      label = due ? 'Due' : 'Upcoming';
+      // "Due"/"Upcoming" are a client-only refinement of "pending" (comparing against the
+      // device clock) - the server only ever returns the generic (already-localized) label.
+      label = due ? l10n.doseDue : l10n.doseUpcoming;
       tone = due ? Tone.info : Tone.neutral;
-    } else if (dose.status == 'taken') {
-      label = 'Taken';
-      tone = Tone.safe;
     } else {
       label = dose.statusLabel;
       tone = doseTone(dose.status);
@@ -56,7 +57,7 @@ class DoseCard extends StatelessWidget {
                     children: [
                       Text(dose.medicationName, style: Theme.of(context).textTheme.titleMedium),
                       Text(
-                        [dose.strengthText, dose.doseAmountText].where((v) => v != null && v.isNotEmpty).join(' · ').ifEmpty('Dose details on the label'),
+                        [dose.strengthText, dose.doseAmountText].where((v) => v != null && v.isNotEmpty).join(' · ').ifEmpty(l10n.doseDetailsOnLabelFallback),
                         style: Theme.of(context).textTheme.labelSmall,
                       ),
                     ],
@@ -73,7 +74,7 @@ class DoseCard extends StatelessWidget {
                 if (onTaken != null)
                   Expanded(
                     child: GradientButton(
-                      label: 'Take',
+                      label: l10n.commonTake,
                       onPressed: busy ? null : onTaken,
                     ),
                   ),
@@ -83,7 +84,7 @@ class DoseCard extends StatelessWidget {
                     child: OutlinedButton(
                       onPressed: busy ? null : onSkip,
                       style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
-                      child: const Text('Skip'),
+                      child: Text(l10n.commonSkip),
                     ),
                   ),
               ],
@@ -132,7 +133,7 @@ class SafetySummaryCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(analysis.subtext, style: TextStyle(color: style.foreground)),
           const SizedBox(height: 8),
-          Text('Last checked ${formatDateTime(analysis.analyzedAt)}', style: Theme.of(context).textTheme.labelSmall),
+          Text(AppLocalizations.of(context)!.domainLastChecked(formatDateTime(analysis.analyzedAt)), style: Theme.of(context).textTheme.labelSmall),
         ],
       ),
     );
@@ -151,7 +152,7 @@ class SafetyChecksCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Checks WellWell ran', style: Theme.of(context).textTheme.titleMedium),
+          Text(AppLocalizations.of(context)!.domainChecksRan, style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           for (var i = 0; i < analysis.checks.length; i++) ...[
             if (i > 0) const Divider(height: 24),
@@ -170,11 +171,16 @@ class SafetyChecksCard extends StatelessWidget {
   }
 }
 
-const _severityLabels = {
-  'high': 'High priority',
-  'warning': 'Needs attention',
-  'info': 'Information',
-};
+String _severityLabel(String severity, AppLocalizations l10n) {
+  switch (severity) {
+    case 'high':
+      return l10n.domainSeverityHigh;
+    case 'warning':
+      return l10n.domainSeverityWarning;
+    default:
+      return l10n.domainSeverityInfo;
+  }
+}
 
 class FindingCard extends StatelessWidget {
   const FindingCard({super.key, required this.finding, this.showActions = true});
@@ -184,6 +190,7 @@ class FindingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final tone = findingTone(finding.severity);
     final style = toneStyles[tone]!;
     return Container(
@@ -211,7 +218,7 @@ class FindingCard extends StatelessWidget {
                   children: [
                     Text(finding.title, style: TextStyle(fontWeight: FontWeight.w600, color: style.foreground, fontSize: 16)),
                     const SizedBox(height: 6),
-                    AppBadge(label: _severityLabels[finding.severity] ?? 'Information', tone: tone),
+                    AppBadge(label: _severityLabel(finding.severity, l10n), tone: tone),
                   ],
                 ),
               ),
@@ -228,7 +235,7 @@ class FindingCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Both products contain', style: Theme.of(context).textTheme.labelLarge),
+                  Text(l10n.domainBothProductsContain, style: Theme.of(context).textTheme.labelLarge),
                   Text(finding.ingredient!.name, style: Theme.of(context).textTheme.titleMedium),
                   for (final med in finding.medications)
                     Padding(
@@ -246,13 +253,15 @@ class FindingCard extends StatelessWidget {
           ],
           const SizedBox(height: 8),
           Text(
-            'Source: ${finding.source}${finding.datasetVersion != null ? ' · dataset ${finding.datasetVersion}' : ''} · Detected ${formatDateTime(finding.detectedAt)}',
+            finding.datasetVersion != null
+                ? l10n.domainSourceDatasetDetected(finding.source, finding.datasetVersion!, formatDateTime(finding.detectedAt))
+                : l10n.domainSourceDetected(finding.source, formatDateTime(finding.detectedAt)),
             style: Theme.of(context).textTheme.labelSmall,
           ),
           if (showActions) ...[
             const SizedBox(height: 12),
-            SecondaryButton(label: 'View medications', onPressed: () => context.go('/medications')),
-            GhostButton(label: 'Why am I seeing this?', onPressed: () => context.push('/finding/${finding.id}')),
+            SecondaryButton(label: l10n.safetyViewMedications, onPressed: () => context.go('/medications')),
+            GhostButton(label: l10n.findingWhyTitle, onPressed: () => context.push('/finding/${finding.id}')),
           ],
         ],
       ),
@@ -358,12 +367,13 @@ class _IngredientEditorState extends State<IngredientEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
-            Expanded(child: Text('Active ingredients', style: Theme.of(context).textTheme.labelLarge)),
+            Expanded(child: Text(l10n.commonActiveIngredients, style: Theme.of(context).textTheme.labelLarge)),
             VerifyRoleChip(used: widget.usedForVerification),
           ],
         ),
@@ -384,7 +394,7 @@ class _IngredientEditorState extends State<IngredientEditor> {
                       Expanded(
                         child: TextField(
                           controller: _rows[i].name,
-                          decoration: const InputDecoration(hintText: 'Ingredient name'),
+                          decoration: InputDecoration(hintText: l10n.commonIngredientNameHint),
                           onChanged: (_) => _emit(),
                         ),
                       ),
@@ -406,7 +416,7 @@ class _IngredientEditorState extends State<IngredientEditor> {
                       Expanded(
                         child: TextField(
                           controller: _rows[i].strength,
-                          decoration: const InputDecoration(hintText: 'Strength'),
+                          decoration: InputDecoration(hintText: l10n.commonStrengthHint),
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
                           onChanged: (_) => _emit(),
                         ),
@@ -416,7 +426,7 @@ class _IngredientEditorState extends State<IngredientEditor> {
                         width: 88,
                         child: TextField(
                           controller: _rows[i].unit,
-                          decoration: const InputDecoration(hintText: 'Unit'),
+                          decoration: InputDecoration(hintText: l10n.commonUnitHint),
                           onChanged: (_) => _emit(),
                         ),
                       ),
@@ -431,7 +441,7 @@ class _IngredientEditorState extends State<IngredientEditor> {
             setState(() => _rows.add(_IngredientControllers()));
             _emit();
           },
-          child: const Text('Add another ingredient'),
+          child: Text(l10n.commonAddAnotherIngredient),
         ),
       ],
     );
@@ -507,7 +517,7 @@ class InsightCard extends StatelessWidget {
                 ),
                 if (generatedByAi) ...[
                   const SizedBox(height: 6),
-                  Text('AI summary', style: Theme.of(context).textTheme.labelSmall),
+                  Text(AppLocalizations.of(context)!.domainAiSummary, style: Theme.of(context).textTheme.labelSmall),
                 ],
               ],
             ),

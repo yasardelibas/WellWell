@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:screen_protector/screen_protector.dart';
 
 import 'app.dart';
@@ -28,6 +29,7 @@ void main() {
       unawaited(ScreenProtector.protectDataLeakageWithBlur());
       await AppTheme.load();
       await AppLanguage.load();
+      await initializeDateFormatting();
       runApp(const ProviderScope(child: WellWellApp()));
     },
     (error, stack) {
