@@ -194,7 +194,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                 Text('Camera access is needed to read labels', style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: 8),
                 const Text(
-                  'MedGuard reads the medication name and ingredients from the label. The photo is processed to extract text and is not stored.',
+                  'WellWell reads the medication name and ingredients from the label. The photo is processed to extract text and is not stored.',
                 ),
                 const Spacer(),
                 PrimaryButton(label: 'Allow camera access', onPressed: _startCamera),
@@ -437,7 +437,7 @@ class _ManualScanScreenState extends ConsumerState<ManualScanScreen> {
         const Align(alignment: Alignment.centerLeft, child: BackCircle()),
         Text('Type the label text', style: Theme.of(context).textTheme.headlineMedium),
         const Text(
-          'Copy the medication name, the active ingredients and the directions exactly as printed. MedGuard matches them against trusted medication data and you confirm the result.',
+          'Copy the medication name, the active ingredients and the directions exactly as printed. WellWell matches them against trusted medication data and you confirm the result.',
         ),
         TextField(
           controller: controller,
@@ -600,7 +600,7 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
               Text('Used to verify', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 4),
               const Text(
-                'MedGuard matches these fields against a trusted medication database. Edit them if the scan misread the label.',
+                'WellWell matches these fields against a trusted medication database. Edit them if the scan misread the label.',
               ),
               const SizedBox(height: 12),
               LabeledField(label: 'Brand name', controller: brand, hint: 'As printed on the box', usedForVerification: true),
@@ -636,11 +636,12 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
               InkWell(
                 onTap: () async {
                   final now = DateTime.now();
-                  final picked = await showDatePicker(
+                  final picked = await showBrandDatePicker(
                     context: context,
                     initialDate: expirationDate ?? now,
                     firstDate: DateTime(now.year - 1),
                     lastDate: DateTime(now.year + 15),
+                    title: 'Expiration date',
                   );
                   if (picked != null) setState(() => expirationDate = picked);
                 },
@@ -675,7 +676,7 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
                 const AppBadge(label: 'Not independently verified', tone: Tone.attention, glyph: '?'),
                 const SizedBox(height: 8),
                 const Text(
-                  'MedGuard could not confirm this product against its medication data source. You can still save it, and it will stay marked as unverified.',
+                  'WellWell could not confirm this product against its medication data source. You can still save it, and it will stay marked as unverified.',
                 ),
               ],
             ],
@@ -816,7 +817,7 @@ class ScanResultScreen extends StatelessWidget {
     return ScreenScaffold(
       children: [
         Text('${medication.displayName} was saved', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('MedGuard checked it against the medications already in your list.'),
+        const Text('WellWell checked it against the medications already in your list.'),
         SafetySummaryCard(analysis: safety),
         ...safety.findings.map((f) => FindingCard(finding: f)),
         AppCard(

@@ -20,7 +20,7 @@ class Reminders {
   static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _ready = false;
 
-  // Set by MedGuardApp once the router exists, so a tapped reminder can jump straight
+  // Set by WellWellApp once the router exists, so a tapped reminder can jump straight
   // to that medication's page instead of just opening the app.
   static void Function(String medicationId)? onNotificationTap;
 
@@ -82,7 +82,7 @@ class Reminders {
       }
       return sync(schedules, medications: medications, privacyMode: privacyMode);
     } catch (error) {
-      debugPrint('MedGuard reminder sync failed: $error');
+      debugPrint('WellWell reminder sync failed: $error');
       return const ReminderSyncResult(scheduledCount: 0, permissionGranted: true);
     }
   }
@@ -122,7 +122,7 @@ class Reminders {
           android: AndroidNotificationDetails(
             'medication-reminders',
             'Medication reminders',
-            channelDescription: 'Daily dose reminders from MedGuard',
+            channelDescription: 'Daily dose reminders from WellWell',
             importance: Importance.high,
             priority: Priority.high,
           ),
@@ -182,7 +182,7 @@ class Reminders {
           android: AndroidNotificationDetails(
             'refill-reminders',
             'Refill reminders',
-            channelDescription: 'Low-supply refill reminders from MedGuard',
+            channelDescription: 'Low-supply refill reminders from WellWell',
             importance: Importance.high,
             priority: Priority.high,
           ),
@@ -193,8 +193,9 @@ class Reminders {
     }
   }
 
-  // One-off "expiring soon" reminders, a week before the label's expiration date. Best-effort
-  // and non-clinical: a missing or unparsable date never blocks dose reminders.
+  // Expiration reminders: a "heads up" one week before the label's expiration date and a
+  // separate "expired" alert on the expiration day itself. Best-effort and non-clinical:
+  // a missing or unparsable date never blocks dose reminders.
   static Future<void> _scheduleExpiring({
     required List<Medication> medications,
     required bool privacyMode,
@@ -208,37 +209,61 @@ class Reminders {
       final expiration = DateTime.tryParse(raw);
       if (expiration == null) continue;
 
-      var scheduled = tz.TZDateTime(tz.local, expiration.year, expiration.month, expiration.day, 9, 0)
+      final dateLabel =
+          '${expiration.year}-${expiration.month.toString().padLeft(2, '0')}-${expiration.day.toString().padLeft(2, '0')}';
+
+      // 1) "Expiring soon" — one week before, at 09:00.
+      var leadAt = tz.TZDateTime(tz.local, expiration.year, expiration.month, expiration.day, 9, 0)
           .subtract(const Duration(days: leadDays));
-      // Already past the lead time (or already expired): nudge tomorrow morning instead of never.
-      if (!scheduled.isAfter(now)) {
-        scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, 9, 0).add(const Duration(days: 1));
+      // Already inside the lead window (but not yet expired): nudge tomorrow morning instead of never.
+      final expiryMorning = tz.TZDateTime(tz.local, expiration.year, expiration.month, expiration.day, 9, 0);
+      if (!leadAt.isAfter(now) && expiryMorning.isAfter(now)) {
+        leadAt = tz.TZDateTime(tz.local, now.year, now.month, now.day, 9, 0).add(const Duration(days: 1));
+      }
+      if (leadAt.isAfter(now)) {
+        final body = privacyMode
+            ? 'One of your medications is expiring soon.'
+            : '${med.displayName} expires on $dateLabel.';
+        await _plugin.zonedSchedule(
+          id: (med.id.hashCode ^ 0x3C3C3C3C) & 0x7fffffff,
+          title: 'Expiring soon',
+          body: body,
+          scheduledDate: leadAt,
+          payload: med.id,
+          notificationDetails: _expirationDetails,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        );
       }
 
-      final body = privacyMode
-          ? 'One of your medications is expiring soon.'
-          : '${med.displayName} expires on ${expiration.year}-${expiration.month.toString().padLeft(2, '0')}-${expiration.day.toString().padLeft(2, '0')}.';
-
-      await _plugin.zonedSchedule(
-        id: (med.id.hashCode ^ 0x3C3C3C3C) & 0x7fffffff,
-        title: 'Expiring soon',
-        body: body,
-        scheduledDate: scheduled,
-        payload: med.id,
-        notificationDetails: NotificationDetails(
-          android: AndroidNotificationDetails(
-            'expiration-reminders',
-            'Expiration reminders',
-            channelDescription: 'Label expiration-date reminders from MedGuard',
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-          iOS: const DarwinNotificationDetails(presentAlert: true, presentSound: true, presentBanner: true, presentList: true),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      );
+      // 2) "Expired" — on the expiration day at 09:00. Only scheduled when that moment is
+      // still in the future; we don't fire retroactive alerts for long-expired items.
+      if (expiryMorning.isAfter(now)) {
+        final body = privacyMode
+            ? 'One of your medications has expired.'
+            : '${med.displayName} expired on $dateLabel. Check the label and ask your pharmacist before using it.';
+        await _plugin.zonedSchedule(
+          id: (med.id.hashCode ^ 0x5A5A5A5A) & 0x7fffffff,
+          title: 'Expired',
+          body: body,
+          scheduledDate: expiryMorning,
+          payload: med.id,
+          notificationDetails: _expirationDetails,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        );
+      }
     }
   }
+
+  static const NotificationDetails _expirationDetails = NotificationDetails(
+    android: AndroidNotificationDetails(
+      'expiration-reminders',
+      'Expiration reminders',
+      channelDescription: 'Label expiration-date reminders from WellWell',
+      importance: Importance.high,
+      priority: Priority.high,
+    ),
+    iOS: DarwinNotificationDetails(presentAlert: true, presentSound: true, presentBanner: true, presentList: true),
+  );
 
   static tz.TZDateTime _nextInstance(int hour, int minute) {
     final now = tz.TZDateTime.now(tz.local);

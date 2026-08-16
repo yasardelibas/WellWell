@@ -6,6 +6,7 @@ import '../l10n/generated/app_localizations.dart';
 import '../services/api.dart';
 import '../state/auth.dart';
 import '../theme/palette.dart';
+import '../widgets/brand_wave.dart';
 import '../widgets/ui.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -77,12 +78,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       ),
     );
 
-    if (!isHero) return Scaffold(backgroundColor: Palette.canvas, body: body);
+    if (!isHero) {
+      return Scaffold(
+        backgroundColor: Palette.canvas,
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: BrandWaves(color: Palette.teal, opacity: 0.07),
+            ),
+            body,
+          ],
+        ),
+      );
+    }
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: Palette.hero, begin: Alignment.topLeft, end: Alignment.bottomRight),
       ),
-      child: Scaffold(backgroundColor: Colors.transparent, body: body),
+      child: Stack(
+        children: [
+          const Positioned.fill(
+            child: BrandWaves(color: Colors.white, opacity: 0.12, anchor: WaveAnchor.both),
+          ),
+          Scaffold(backgroundColor: Colors.transparent, body: body),
+        ],
+      ),
     );
   }
 }
@@ -97,7 +117,7 @@ class _Welcome extends StatelessWidget {
       children: [
         LogoMark(size: 96, onDark: true),
         SizedBox(height: 16),
-        Text('MEDGUARD', style: TextStyle(color: Colors.white70, letterSpacing: 4, fontSize: 12)),
+        Text('WELLWELL', style: TextStyle(color: Colors.white70, letterSpacing: 4, fontSize: 12)),
         SizedBox(height: 12),
         Text('Scan. Understand.\nStay safer.', textAlign: TextAlign.center, style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700)),
         SizedBox(height: 16),
@@ -161,9 +181,9 @@ class _Safety extends StatelessWidget {
         const SizedBox(height: 16),
         const Callout(
           tone: Tone.attention,
-          title: 'MedGuard is not a diagnosis tool',
+          title: 'WellWell is not a diagnosis tool',
           message:
-              'MedGuard does not provide medical diagnoses or change medication instructions. Always follow your medication label and advice from your healthcare professional.',
+              'WellWell does not provide medical diagnoses or change medication instructions. Always follow your medication label and advice from your healthcare professional.',
         ),
         const SizedBox(height: 16),
         const Text(
@@ -183,7 +203,6 @@ class AuthScreen extends ConsumerStatefulWidget {
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool signIn = true;
-  bool loading = false;
   bool demoLoading = false;
   String? error;
   final email = TextEditingController();
@@ -199,25 +218,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   Future<void> submit() async {
-    setState(() {
-      loading = true;
-      error = null;
-    });
-    try {
-      if (signIn) {
-        await ref.read(authProvider.notifier).signIn(email.text, password.text);
-      } else {
-        await ref.read(authProvider.notifier).signUp(
-              email: email.text,
-              password: password.text,
-              displayName: name.text,
-            );
-      }
-    } catch (e) {
-      setState(() => error = describeError(e));
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
+    final l10n = AppLocalizations.of(context)!;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.authUseDemoAccount),
+        content: Text(l10n.authDemoOnlyMessage),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.commonOk),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> demo() async {
@@ -238,13 +252,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Widget build(BuildContext context) {
     final expired = ref.watch(authProvider).sessionExpired;
     return Scaffold(
-      body: SafeArea(
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: BrandWaves(color: Palette.teal, opacity: 0.07),
+          ),
+          SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(28, 24, 28, 32),
           children: [
             const LogoMark(size: 64),
             const SizedBox(height: 8),
-            Text('MEDGUARD', textAlign: TextAlign.center, style: TextStyle(letterSpacing: 3, color: Palette.inkSubtle, fontSize: 12)),
+            Text('WELLWELL', textAlign: TextAlign.center, style: TextStyle(letterSpacing: 3, color: Palette.inkSubtle, fontSize: 12)),
             const SizedBox(height: 12),
             Text(
               signIn ? AppLocalizations.of(context)!.authWelcomeBack : AppLocalizations.of(context)!.authCreateAccount,
@@ -289,22 +308,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             const SizedBox(height: 8),
             if (!signIn) ...[
               const Callout(
-                title: 'What MedGuard does not do',
-                message: 'MedGuard never diagnoses conditions or changes the instructions on your medication label.',
+                title: 'What WellWell does not do',
+                message: 'WellWell never diagnoses conditions or changes the instructions on your medication label.',
               ),
               const SizedBox(height: 12),
             ],
             PrimaryButton(
               label: signIn ? AppLocalizations.of(context)!.commonSignIn : AppLocalizations.of(context)!.commonSignUp,
-              loading: loading,
               onPressed: submit,
             ),
-            if (signIn) ...[
-              const SizedBox(height: 12),
-              SecondaryButton(label: AppLocalizations.of(context)!.authUseDemoAccount, loading: demoLoading, onPressed: demo),
-            ],
+            const SizedBox(height: 12),
+            SecondaryButton(label: AppLocalizations.of(context)!.authUseDemoAccount, loading: demoLoading, onPressed: demo),
           ],
         ),
+          ),
+        ],
       ),
     );
   }
@@ -475,13 +493,13 @@ class _SafetyNoticeScreenState extends ConsumerState<SafetyNoticeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('How MedGuard works', style: Theme.of(context).textTheme.headlineMedium),
+              Text('How WellWell works', style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 16),
               const Callout(
                 tone: Tone.attention,
                 title: 'Please read before continuing',
                 message:
-                    'MedGuard does not provide medical diagnoses or change medication instructions. Always follow your medication label and advice from your healthcare professional.',
+                    'WellWell does not provide medical diagnoses or change medication instructions. Always follow your medication label and advice from your healthcare professional.',
               ),
               const Spacer(),
               if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),

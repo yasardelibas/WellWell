@@ -495,7 +495,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
             ListTile(
               leading: Icon(Icons.camera_alt_outlined, color: Palette.brand),
               title: const Text('Scan a label'),
-              subtitle: const Text('Use your camera. MedGuard reads the name and ingredients for you to confirm.'),
+              subtitle: const Text('Use your camera. WellWell reads the name and ingredients for you to confirm.'),
               onTap: () {
                 Navigator.pop(context);
                 this.context.go('/scan');
@@ -529,7 +529,7 @@ class _MedicationsScreenState extends ConsumerState<MedicationsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Medications', style: Theme.of(context).textTheme.headlineMedium),
-                  const Text('Everything you have confirmed and saved in MedGuard.'),
+                  const Text('Everything you have confirmed and saved in WellWell.'),
                 ],
               ),
             ),
@@ -720,7 +720,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
       onRefresh: load,
       children: [
         Text('Safety', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Deterministic checks across the medications saved in MedGuard.'),
+        const Text('Deterministic checks across the medications saved in WellWell.'),
         if (loading)
           const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
         else if (error != null)
@@ -732,7 +732,7 @@ class _SafetyScreenState extends State<SafetyScreen> {
               tone: Tone.info,
               title: 'Unknown does not mean safe',
               message:
-                  'MedGuard can only report what its current checks and data sources cover. Always read the label and ask a pharmacist if something is unclear.',
+                  'WellWell can only report what its current checks and data sources cover. Always read the label and ask a pharmacist if something is unclear.',
             )
           else
             ...data.findings.map((f) => Padding(padding: const EdgeInsets.only(bottom: 12), child: FindingCard(finding: f))),

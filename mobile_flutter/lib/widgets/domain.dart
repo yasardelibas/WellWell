@@ -152,7 +152,7 @@ class SafetyChecksCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Checks MedGuard ran', style: Theme.of(context).textTheme.titleMedium),
+          Text('Checks WellWell ran', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           for (var i = 0; i < analysis.checks.length; i++) ...[
             if (i > 0) const Divider(height: 24),

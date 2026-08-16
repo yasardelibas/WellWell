@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'MedGuard';
+  String get appTitle => 'WellWell';
 
   @override
   String get navHome => 'Home';
@@ -36,6 +36,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonRetry => 'Try again';
 
   @override
+  String get commonOk => 'OK';
+
+  @override
   String get commonSignIn => 'Sign in';
 
   @override
@@ -57,6 +60,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authUseDemoAccount => 'Use the demo account';
+
+  @override
+  String get authDemoOnlyMessage =>
+      'Sign in and sign up are not available. Please use the demo account.';
 
   @override
   String get authEmail => 'Email';
@@ -100,7 +107,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsLanguageHint =>
-      'Choose the language MedGuard uses for you.';
+      'Choose the language WellWell uses for you.';
 
   @override
   String get languageSystem => 'System';
@@ -116,7 +123,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get errorNetwork =>
-      'We couldn\'t reach MedGuard. Check your connection and try again.';
+      'We couldn\'t reach WellWell. Check your connection and try again.';
 
   @override
   String get errorInvalidCredentials => 'Email or password is incorrect.';

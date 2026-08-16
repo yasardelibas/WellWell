@@ -9,6 +9,7 @@ using MedGuard.Infrastructure.Ai;
 using MedGuard.Infrastructure.Configuration;
 using MedGuard.Infrastructure.Drugs;
 using MedGuard.Infrastructure.Extraction;
+using MedGuard.Infrastructure.Http;
 using MedGuard.Infrastructure.Notifications;
 using MedGuard.Infrastructure.Persistence;
 using MedGuard.Infrastructure.Security;
@@ -46,8 +47,8 @@ public static class DependencyInjection
         AddPersistence(services, configuration);
         AddCaching(services, configuration);
         AddDrugProviders(services, configuration);
-        AddExtraction(services);
-        AddExplanations(services);
+        AddExtraction(services, configuration);
+        AddExplanations(services, configuration);
 
         services.AddSingleton<IIngredientNormalizer, IngredientNormalizer>();
         services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
@@ -110,25 +111,26 @@ public static class DependencyInjection
         services.AddHttpClient<RxNormDrugDataProvider>(client =>
         {
             client.BaseAddress = new Uri(EnsureTrailingSlash(options.RxNormBaseUrl));
-            client.Timeout = timeout;
+            // HttpClient.Timeout is not coordinated with retries; Polly owns the budget.
+            client.Timeout = Timeout.InfiniteTimeSpan;
             client.DefaultRequestHeaders.UserAgent.ParseAdd("MedGuard/1.0");
-        });
+        }).AddDrugDataResilience(timeout);
 
         services.AddHttpClient<OpenFdaDrugDataProvider>(client =>
         {
             client.BaseAddress = new Uri(EnsureTrailingSlash(options.OpenFdaBaseUrl));
-            client.Timeout = timeout;
+            client.Timeout = Timeout.InfiniteTimeSpan;
             client.DefaultRequestHeaders.UserAgent.ParseAdd("MedGuard/1.0");
-        });
+        }).AddDrugDataResilience(timeout);
 
         // RxClass powers deterministic drug classification (uses + therapeutic class) for the
         // education card. It is an enrichment, not part of the identity lookup chain.
         services.AddHttpClient<IDrugClassificationProvider, RxClassDrugClassificationProvider>(client =>
         {
             client.BaseAddress = new Uri(EnsureTrailingSlash(options.RxClassBaseUrl));
-            client.Timeout = timeout;
+            client.Timeout = Timeout.InfiniteTimeSpan;
             client.DefaultRequestHeaders.UserAgent.ParseAdd("MedGuard/1.0");
-        });
+        }).AddDrugDataResilience(timeout);
 
         // Registration order defines the lookup chain; the first confident match wins.
         foreach (var providerName in options.Providers.Select(name => name.Trim().ToLowerInvariant()).Distinct())
@@ -175,34 +177,26 @@ public static class DependencyInjection
         services.AddTransient<INotificationSender, ResendNotificationSender>();
     }
 
-    private static void AddExtraction(IServiceCollection services)
+    private static void AddExtraction(IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<TextLabelExtractionService>();
 
-        services.AddHttpClient<VisionLabelExtractionService>((provider, client) =>
-        {
-            var options = provider.GetRequiredService<IOptions<AiOptions>>().Value;
-            client.BaseAddress = new Uri(EnsureTrailingSlash(options.BaseUrl));
-            client.Timeout = TimeSpan.FromSeconds(Math.Clamp(options.TimeoutSeconds, 5, 60));
-
-            if (!string.IsNullOrWhiteSpace(options.ApiKey))
-            {
-                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
-            }
-        });
+        services.AddHttpClient<VisionLabelExtractionService>(ConfigureAiClient)
+            .AddAiResilience(AiTimeout(configuration));
 
         services.AddTransient<ILabelExtractionService>(provider => provider.GetRequiredService<VisionLabelExtractionService>());
     }
 
-    private static void AddExplanations(IServiceCollection services)
+    private static void AddExplanations(IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<TemplateExplanationService>();
         services.AddSingleton<TemplateAdherenceInsightService>();
         services.AddSingleton<TemplateMedicationEducationService>();
 
-        services.AddHttpClient<OpenAiExplanationService>(ConfigureAiClient);
-        services.AddHttpClient<OpenAiAdherenceInsightService>(ConfigureAiClient);
-        services.AddHttpClient<OpenAiMedicationEducationService>(ConfigureAiClient);
+        var timeout = AiTimeout(configuration);
+        services.AddHttpClient<OpenAiExplanationService>(ConfigureAiClient).AddAiResilience(timeout);
+        services.AddHttpClient<OpenAiAdherenceInsightService>(ConfigureAiClient).AddAiResilience(timeout);
+        services.AddHttpClient<OpenAiMedicationEducationService>(ConfigureAiClient).AddAiResilience(timeout);
 
         services.AddTransient<IMedicationExplanationService>(provider => provider.GetRequiredService<OpenAiExplanationService>());
         services.AddTransient<IAdherenceInsightService>(provider => provider.GetRequiredService<OpenAiAdherenceInsightService>());
@@ -213,12 +207,18 @@ public static class DependencyInjection
     {
         var options = provider.GetRequiredService<IOptions<AiOptions>>().Value;
         client.BaseAddress = new Uri(EnsureTrailingSlash(options.BaseUrl));
-        client.Timeout = TimeSpan.FromSeconds(Math.Clamp(options.TimeoutSeconds, 5, 60));
+        client.Timeout = Timeout.InfiniteTimeSpan;
 
         if (!string.IsNullOrWhiteSpace(options.ApiKey))
         {
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", options.ApiKey);
         }
+    }
+
+    private static TimeSpan AiTimeout(IConfiguration configuration)
+    {
+        var seconds = configuration.GetSection(AiOptions.SectionName).Get<AiOptions>()?.TimeoutSeconds ?? 20;
+        return TimeSpan.FromSeconds(Math.Clamp(seconds, 5, 60));
     }
 
     private static string EnsureTrailingSlash(string url) => url.EndsWith('/') ? url : url + "/";

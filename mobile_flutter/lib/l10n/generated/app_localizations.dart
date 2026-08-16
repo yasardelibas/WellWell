@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
-  /// **'MedGuard'**
+  /// **'WellWell'**
   String get appTitle;
 
   /// No description provided for @navHome.
@@ -152,6 +152,12 @@ abstract class AppLocalizations {
   /// **'Try again'**
   String get commonRetry;
 
+  /// No description provided for @commonOk.
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get commonOk;
+
   /// No description provided for @commonSignIn.
   ///
   /// In en, this message translates to:
@@ -193,6 +199,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Use the demo account'**
   String get authUseDemoAccount;
+
+  /// No description provided for @authDemoOnlyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in and sign up are not available. Please use the demo account.'**
+  String get authDemoOnlyMessage;
 
   /// No description provided for @authEmail.
   ///
@@ -275,7 +287,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsLanguageHint.
   ///
   /// In en, this message translates to:
-  /// **'Choose the language MedGuard uses for you.'**
+  /// **'Choose the language WellWell uses for you.'**
   String get settingsLanguageHint;
 
   /// No description provided for @languageSystem.
@@ -305,7 +317,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorNetwork.
   ///
   /// In en, this message translates to:
-  /// **'We couldn\'t reach MedGuard. Check your connection and try again.'**
+  /// **'We couldn\'t reach WellWell. Check your connection and try again.'**
   String get errorNetwork;
 
   /// No description provided for @errorInvalidCredentials.

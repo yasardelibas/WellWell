@@ -1,17 +1,212 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/palette.dart';
+
+/// A themed date picker presented as a rounded bottom sheet with a Cupertino
+/// wheel, matching the app's time picker instead of the stock Material dialog.
+/// Returns the chosen date, or null if the sheet is dismissed/cancelled.
+Future<DateTime?> showBrandDatePicker({
+  required BuildContext context,
+  required DateTime initialDate,
+  required DateTime firstDate,
+  required DateTime lastDate,
+  String title = 'Select date',
+}) {
+  // Clamp so the wheel never starts outside the allowed range (Cupertino asserts on this).
+  DateTime clamp(DateTime value) {
+    if (value.isBefore(firstDate)) return firstDate;
+    if (value.isAfter(lastDate)) return lastDate;
+    return value;
+  }
+
+  var temp = clamp(initialDate);
+  return showModalBottomSheet<DateTime>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (sheetContext) {
+      return Container(
+        decoration: BoxDecoration(
+          color: Palette.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Palette.line,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 12, 4),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Palette.ink),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(sheetContext),
+                      child: Text('Cancel', style: TextStyle(color: Palette.inkMuted)),
+                    ),
+                    const SizedBox(width: 4),
+                    FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: Palette.brand),
+                      onPressed: () => Navigator.pop(sheetContext, temp),
+                      child: const Text('Done'),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 240,
+                child: CupertinoTheme(
+                  data: CupertinoThemeData(brightness: Theme.of(sheetContext).brightness),
+                  child: CupertinoDatePicker(
+                    mode: CupertinoDatePickerMode.date,
+                    initialDateTime: temp,
+                    minimumDate: firstDate,
+                    maximumDate: lastDate,
+                    onDateTimeChanged: (value) => temp = value,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Themed time picker (24h) presented as a rounded bottom sheet with a Cupertino
+/// wheel, matching [showBrandDatePicker]. Returns "HH:mm", or null if cancelled.
+Future<String?> showBrandTimePicker({
+  required BuildContext context,
+  required String initialTime,
+  String title = 'Reminder time',
+}) {
+  final parts = initialTime.split(':');
+  final hour = (parts.isNotEmpty ? int.tryParse(parts[0]) ?? 8 : 8).clamp(0, 23);
+  final minute = (parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0).clamp(0, 59);
+  final now = DateTime.now();
+  var temp = DateTime(now.year, now.month, now.day, hour, minute);
+
+  String format(DateTime v) =>
+      '${v.hour.toString().padLeft(2, '0')}:${v.minute.toString().padLeft(2, '0')}';
+
+  return showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (sheetContext) {
+      return Container(
+        decoration: BoxDecoration(
+          color: Palette.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Palette.line,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 12, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: Palette.ink),
+                          ),
+                          Text(
+                            'Repeats every day at this time.',
+                            style: TextStyle(color: Palette.inkMuted, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(sheetContext),
+                      child: Text('Cancel', style: TextStyle(color: Palette.inkMuted)),
+                    ),
+                    const SizedBox(width: 4),
+                    FilledButton(
+                      style: FilledButton.styleFrom(backgroundColor: Palette.brand),
+                      onPressed: () => Navigator.pop(sheetContext, format(temp)),
+                      child: const Text('Done'),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 216,
+                child: CupertinoTheme(
+                  data: CupertinoThemeData(brightness: Theme.of(sheetContext).brightness),
+                  child: CupertinoDatePicker(
+                    mode: CupertinoDatePickerMode.time,
+                    use24hFormat: true,
+                    initialDateTime: temp,
+                    onDateTimeChanged: (value) => temp = value,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
 
 class LogoMark extends StatelessWidget {
   const LogoMark({super.key, this.size = 64, this.onDark = false});
 
   final double size;
+
+  /// Kept for API compatibility with existing call sites; the WellWell mark is a
+  /// full-color asset, so it reads well on both light and dark backgrounds.
   final bool onDark;
 
   @override
   Widget build(BuildContext context) {
-    final color = onDark ? Colors.white : Palette.brand;
-    return Icon(Icons.shield_outlined, size: size, color: color);
+    // Wrapped in Center so a parent with tight cross-axis constraints (e.g. a
+    // ListView child) can't stretch the square mark into a cropped wide strip.
+    return Center(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(size * 0.22),
+        child: Image.asset(
+          'assets/brand/logo.png',
+          width: size,
+          height: size,
+          fit: BoxFit.contain,
+        ),
+      ),
+    );
   }
 }
 
@@ -107,6 +302,7 @@ class LabeledField extends StatelessWidget {
     this.maxLines = 1,
     this.enabled = true,
     this.usedForVerification,
+    this.icon,
   });
 
   final String label;
@@ -118,6 +314,7 @@ class LabeledField extends StatelessWidget {
   final bool enabled;
   /// True when this value is sent to the medication database. False when it is stored only.
   final bool? usedForVerification;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
@@ -126,6 +323,10 @@ class LabeledField extends StatelessWidget {
       children: [
         Row(
           children: [
+            if (icon != null) ...[
+              Icon(icon, size: 18, color: Palette.inkSubtle),
+              const SizedBox(width: 8),
+            ],
             Expanded(child: Text(label, style: Theme.of(context).textTheme.labelLarge)),
             if (usedForVerification != null) VerifyRoleChip(used: usedForVerification!),
           ],
@@ -224,6 +425,7 @@ class BackCircle extends StatelessWidget {
       style: IconButton.styleFrom(
         side: BorderSide(color: Palette.line),
         backgroundColor: Palette.surface,
+        foregroundColor: Palette.ink,
       ),
       icon: const Icon(Icons.chevron_left),
     );
@@ -342,26 +544,40 @@ class ScreenScaffold extends StatelessWidget {
 }
 
 class FieldRow extends StatelessWidget {
-  const FieldRow({super.key, required this.label, this.value, this.divider = true});
+  const FieldRow({super.key, required this.label, this.value, this.divider = true, this.icon});
 
   final String label;
   final String? value;
   final bool divider;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 4),
+        Text(value == null || value!.isEmpty ? '—' : value!, style: Theme.of(context).textTheme.bodyLarge),
+      ],
+    );
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: divider ? BoxDecoration(border: Border(bottom: BorderSide(color: Palette.line))) : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.labelLarge),
-          const SizedBox(height: 4),
-          Text(value == null || value!.isEmpty ? '—' : value!, style: Theme.of(context).textTheme.bodyLarge),
-        ],
-      ),
+      child: icon == null
+          ? content
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Icon(icon, size: 20, color: Palette.inkSubtle),
+                ),
+                const SizedBox(width: 12),
+                Expanded(child: content),
+              ],
+            ),
     );
   }
 }

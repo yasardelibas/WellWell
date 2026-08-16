@@ -18,7 +18,7 @@ void main() {
       FlutterError.onError = (details) {
         FlutterError.presentError(details);
       };
-      // MedGuard is a portrait-only experience; locking orientation prevents the
+      // WellWell is a portrait-only experience; locking orientation prevents the
       // sideways/overflowing layout seen when the device is rotated to landscape.
       await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
       // Medication data is sensitive: block screenshots (Android FLAG_SECURE, also
@@ -28,10 +28,10 @@ void main() {
       unawaited(ScreenProtector.protectDataLeakageWithBlur());
       await AppTheme.load();
       await AppLanguage.load();
-      runApp(const ProviderScope(child: MedGuardApp()));
+      runApp(const ProviderScope(child: WellWellApp()));
     },
     (error, stack) {
-      debugPrint('MedGuard uncaught: $error\n$stack');
+      debugPrint('WellWell uncaught: $error\n$stack');
     },
   );
 }

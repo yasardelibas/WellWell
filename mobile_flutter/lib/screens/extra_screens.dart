@@ -1,4 +1,3 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -202,11 +201,12 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
   Future<void> _editExpiration(Medication med) async {
     final current = med.expirationDate == null ? null : DateTime.tryParse(med.expirationDate!);
     final now = DateTime.now();
-    final picked = await showDatePicker(
+    final picked = await showBrandDatePicker(
       context: context,
       initialDate: current ?? now,
       firstDate: DateTime(now.year - 1),
       lastDate: DateTime(now.year + 15),
+      title: 'Expiration date',
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -291,7 +291,7 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
             tone: Tone.attention,
             title: 'Not independently verified',
             message:
-                'MedGuard matches brand, generic name, strength, form and active ingredients against a trusted medication database. Edit those fields if they do not match the label, then save to try again.',
+                'WellWell matches brand, generic name, strength, form and active ingredients against a trusted medication database. Edit those fields if they do not match the label, then save to try again.',
             child: editing
                 ? null
                 : SecondaryButton(label: 'Edit details to verify', onPressed: () => _beginEdit(med)),
@@ -315,13 +315,13 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
               ),
               if (editing) ...[
                 const SizedBox(height: 8),
-                LabeledField(label: 'Brand name', controller: brand, usedForVerification: true),
+                LabeledField(label: 'Brand name', controller: brand, usedForVerification: true, icon: Icons.local_pharmacy_outlined),
                 const SizedBox(height: 12),
-                LabeledField(label: 'Generic name', controller: generic, usedForVerification: true),
+                LabeledField(label: 'Generic name', controller: generic, usedForVerification: true, icon: Icons.science_outlined),
                 const SizedBox(height: 12),
-                LabeledField(label: 'Strength', controller: strength, usedForVerification: true),
+                LabeledField(label: 'Strength', controller: strength, usedForVerification: true, icon: Icons.fitness_center_outlined),
                 const SizedBox(height: 12),
-                LabeledField(label: 'Dosage form', controller: form, usedForVerification: true),
+                LabeledField(label: 'Dosage form', controller: form, usedForVerification: true, icon: Icons.medication_outlined),
                 const SizedBox(height: 12),
                 IngredientEditor(
                   key: const ValueKey('detail-ingredients'),
@@ -347,23 +347,23 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
               Text(editing ? 'On the label only' : 'About', style: Theme.of(context).textTheme.titleMedium),
               if (editing) ...[
                 const SizedBox(height: 8),
-                LabeledField(label: 'Route', controller: route, usedForVerification: false),
+                LabeledField(label: 'Route', controller: route, usedForVerification: false, icon: Icons.route_outlined),
                 const SizedBox(height: 12),
-                LabeledField(label: 'Label directions', controller: directions, maxLines: 3, usedForVerification: false),
+                LabeledField(label: 'Label directions', controller: directions, maxLines: 3, usedForVerification: false, icon: Icons.list_alt_outlined),
                 const SizedBox(height: 12),
-                LabeledField(label: 'Notes', controller: notes, maxLines: 2, usedForVerification: false),
+                LabeledField(label: 'Notes', controller: notes, maxLines: 2, usedForVerification: false, icon: Icons.sticky_note_2_outlined),
                 const SizedBox(height: 16),
                 PrimaryButton(label: 'Save and try to verify', loading: busy, onPressed: _saveEdits),
                 SecondaryButton(label: 'Cancel', onPressed: () => setState(() => editing = false)),
               ] else ...[
-                FieldRow(label: 'Brand', value: med.brandName),
-                FieldRow(label: 'Generic name', value: med.genericName),
-                FieldRow(label: 'Strength', value: med.strength),
-                FieldRow(label: 'Form', value: med.dosageForm),
-                FieldRow(label: 'Route', value: med.route),
-                FieldRow(label: 'Directions', value: med.labelDirections),
-                FieldRow(label: 'Manufacturer', value: med.manufacturer),
-                FieldRow(label: 'Notes', value: med.notes, divider: false),
+                FieldRow(label: 'Brand', value: med.brandName, icon: Icons.local_pharmacy_outlined),
+                FieldRow(label: 'Generic name', value: med.genericName, icon: Icons.science_outlined),
+                FieldRow(label: 'Strength', value: med.strength, icon: Icons.fitness_center_outlined),
+                FieldRow(label: 'Form', value: med.dosageForm, icon: Icons.medication_outlined),
+                FieldRow(label: 'Route', value: med.route, icon: Icons.route_outlined),
+                FieldRow(label: 'Directions', value: med.labelDirections, icon: Icons.list_alt_outlined),
+                FieldRow(label: 'Manufacturer', value: med.manufacturer, icon: Icons.factory_outlined),
+                FieldRow(label: 'Notes', value: med.notes, divider: false, icon: Icons.sticky_note_2_outlined),
               ],
             ],
           ),
@@ -684,13 +684,13 @@ class _NewMedicationScreenState extends ConsumerState<NewMedicationScreen> {
               const SizedBox(height: 4),
               const Text('Brand, generic name, strength, form and active ingredients decide whether this product can be verified.'),
               const SizedBox(height: 12),
-              LabeledField(label: 'Brand name', controller: brand, hint: 'As printed on the box', usedForVerification: true),
+              LabeledField(label: 'Brand name', controller: brand, hint: 'As printed on the box', usedForVerification: true, icon: Icons.local_pharmacy_outlined),
               const SizedBox(height: 12),
-              LabeledField(label: 'Generic name', controller: generic, usedForVerification: true),
+              LabeledField(label: 'Generic name', controller: generic, usedForVerification: true, icon: Icons.science_outlined),
               const SizedBox(height: 12),
-              LabeledField(label: 'Strength', controller: strength, hint: '500 mg', usedForVerification: true),
+              LabeledField(label: 'Strength', controller: strength, hint: '500 mg', usedForVerification: true, icon: Icons.fitness_center_outlined),
               const SizedBox(height: 12),
-              LabeledField(label: 'Dosage form', controller: form, hint: 'Tablet', usedForVerification: true),
+              LabeledField(label: 'Dosage form', controller: form, hint: 'Tablet', usedForVerification: true, icon: Icons.medication_outlined),
               const SizedBox(height: 12),
               IngredientEditor(ingredients: ingredients, onChanged: (v) => ingredients = v),
             ],
@@ -704,7 +704,7 @@ class _NewMedicationScreenState extends ConsumerState<NewMedicationScreen> {
               const SizedBox(height: 4),
               const Text('Directions are stored as printed. They are not used to verify the product.'),
               const SizedBox(height: 12),
-              LabeledField(label: 'Label directions', controller: directions, maxLines: 3, usedForVerification: false),
+              LabeledField(label: 'Label directions', controller: directions, maxLines: 3, usedForVerification: false, icon: Icons.list_alt_outlined),
             ],
           ),
         ),
@@ -815,7 +815,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
       if (!reminders.permissionGranted) {
         setState(() {
           busy = false;
-          error = 'Reminders were saved, but notification permission is off. Enable notifications for MedGuard in iPhone Settings.';
+          error = 'Reminders were saved, but notification permission is off. Enable notifications for WellWell in iPhone Settings.';
         });
         return;
       }
@@ -832,8 +832,10 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   }
 
   Future<void> _addTime() async {
+    final picked = await showBrandTimePicker(context: context, initialTime: '08:00', title: 'Add reminder time');
+    if (picked == null || !mounted) return;
     setState(() {
-      times.add('08:00');
+      times.add(picked);
       timeKeys.add(UniqueKey());
     });
   }
@@ -856,31 +858,30 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
               for (var i = 0; i < times.length; i++)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: _ReminderTimePicker(
+                  child: _ReminderTimeTile(
                     key: timeKeys[i],
                     time: times[i],
-                    onChanged: (value) => times[i] = value,
+                    onEdit: () async {
+                      final picked = await showBrandTimePicker(context: context, initialTime: times[i]);
+                      if (picked == null || !mounted) return;
+                      setState(() => times[i] = picked);
+                    },
                     onRemove: () {
-                      final removedTime = times[i];
-                      final removedKey = timeKeys[i];
                       setState(() {
                         times.removeAt(i);
                         timeKeys.removeAt(i);
                       });
-                      showAppSnackBar(
-                        context,
-                        'Reminder time removed.',
-                        actionLabel: 'Undo',
-                        onAction: () => setState(() {
-                          final restoreAt = i <= times.length ? i : times.length;
-                          times.insert(restoreAt, removedTime);
-                          timeKeys.insert(restoreAt, removedKey);
-                        }),
-                      );
                     },
                   ),
                 ),
-              TextButton(onPressed: _addTime, child: const Text('Add a date and time')),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _addTime,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add a reminder time'),
+                ),
+              ),
               const SizedBox(height: 8),
               LabeledField(label: 'Dose amount', controller: doseAmount, hint: '1 tablet'),
             ],
@@ -898,76 +899,49 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   }
 }
 
-class _ReminderTimePicker extends StatefulWidget {
-  const _ReminderTimePicker({super.key, required this.time, required this.onChanged, required this.onRemove});
+/// A single reminder time shown as a clean, tappable row. Tapping opens the
+/// themed time-picker bottom sheet; only the time of day matters because
+/// schedules repeat daily (see matchDateTimeComponents in Reminders).
+class _ReminderTimeTile extends StatelessWidget {
+  const _ReminderTimeTile({super.key, required this.time, required this.onEdit, required this.onRemove});
 
   final String time;
-  final ValueChanged<String> onChanged;
+  final VoidCallback onEdit;
   final VoidCallback onRemove;
 
   @override
-  State<_ReminderTimePicker> createState() => _ReminderTimePickerState();
-}
-
-class _ReminderTimePickerState extends State<_ReminderTimePicker> {
-  late DateTime _selected;
-
-  @override
-  void initState() {
-    super.initState();
-    final now = DateTime.now();
-    final parts = widget.time.split(':');
-    final hour = parts.isNotEmpty ? (int.tryParse(parts[0]) ?? 8).clamp(0, 23).toInt() : 8;
-    final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0).clamp(0, 59).toInt() : 0;
-    _selected = DateTime(now.year, now.month, now.day, hour, minute);
-  }
-
-  String _label(DateTime value) =>
-      '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
-
-  @override
   Widget build(BuildContext context) {
-    // Only the time of day is ever used (schedules repeat daily - see matchDateTimeComponents:
-    // DateTimeComponents.time in Reminders), so the picker only asks for a time. It used to be
-    // a date+time wheel, which forced scrolling past an irrelevant date to reach the time and
-    // made picking e.g. "next month" look like it was trying (and failing) to set a real date.
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            children: [
-              Text(_label(_selected), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-              const SizedBox(height: 4),
-              Text('Repeats every day at this time.', style: TextStyle(color: Palette.inkMuted, fontSize: 12)),
-              SizedBox(
-                height: 216,
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: (_) => true,
-                  child: CupertinoTheme(
-                    data: CupertinoThemeData(brightness: Theme.of(context).brightness),
-                    child: CupertinoDatePicker(
-                      mode: CupertinoDatePickerMode.time,
-                      use24hFormat: true,
-                      initialDateTime: _selected,
-                      onDateTimeChanged: (value) {
-                        setState(() => _selected = value);
-                        widget.onChanged(
-                          '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}',
-                        );
-                      },
-                    ),
-                  ),
-                ),
+    return InkWell(
+      onTap: onEdit,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+        decoration: BoxDecoration(
+          color: Palette.surfaceMuted,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Palette.line),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.alarm_outlined, color: Palette.brand, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(time, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+                  Text('Repeats every day', style: TextStyle(color: Palette.inkMuted, fontSize: 12)),
+                ],
               ),
-            ],
-          ),
+            ),
+            Text('Edit', style: TextStyle(color: Palette.brand, fontWeight: FontWeight.w600)),
+            IconButton(
+              onPressed: onRemove,
+              icon: Icon(Icons.delete_outline, color: Palette.inkMuted),
+            ),
+          ],
         ),
-        IconButton(
-          onPressed: widget.onRemove,
-          icon: const Icon(Icons.delete_outline),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -2110,7 +2084,7 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
       children: [
         const Align(alignment: Alignment.centerLeft, child: BackCircle()),
         Text('Personal Information', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('How MedGuard greets you and the email on this account.'),
+        const Text('How WellWell greets you and the email on this account.'),
         AppCard(
           child: Column(
             children: [
@@ -2276,7 +2250,7 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
       children: [
         const Align(alignment: Alignment.centerLeft, child: BackCircle()),
         Text('App Settings', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Device lock and how MedGuard behaves on this phone.'),
+        const Text('Device lock and how WellWell behaves on this phone.'),
         AppCard(
           child: ToggleRow(
             label: 'Biometric app lock',
@@ -2342,7 +2316,7 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
             children: [
               Text('Language', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 4),
-              const Text("Choose the language MedGuard uses for you. This also changes what's sent to you by email."),
+              const Text("Choose the language WellWell uses for you. This also changes what's sent to you by email."),
               const SizedBox(height: 12),
               ValueListenableBuilder<Locale?>(
                 valueListenable: AppLanguage.localeNotifier,
@@ -2389,7 +2363,7 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
       children: [
         const Align(alignment: Alignment.centerLeft, child: BackCircle()),
         Text('Notifications', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('How reminder alerts appear on the lock screen. MedGuard sends a local notification at each confirmed reminder time.'),
+        const Text('How reminder alerts appear on the lock screen. WellWell sends a local notification at each confirmed reminder time.'),
         AppCard(
           child: ToggleRow(
             label: 'Private notifications',
@@ -2428,7 +2402,7 @@ class PrivacySettingsScreen extends StatelessWidget {
       children: [
         const Align(alignment: Alignment.centerLeft, child: BackCircle()),
         Text('Privacy', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('How MedGuard treats medication information on this device.'),
+        const Text('How WellWell treats medication information on this device.'),
         const AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2440,7 +2414,7 @@ class PrivacySettingsScreen extends StatelessWidget {
           ),
         ),
         const Callout(
-          title: 'How MedGuard makes decisions',
+          title: 'How WellWell makes decisions',
           message:
               'Safety findings come from deterministic checks against trusted medication data. Plain-language explanations only describe findings that already exist; they never create or dismiss one.',
         ),

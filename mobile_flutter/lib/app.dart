@@ -15,15 +15,17 @@ import 'state/auth.dart';
 import 'theme/app_theme.dart';
 import 'theme/palette.dart';
 import 'theme/theme_controller.dart';
+import 'widgets/brand_wave.dart';
+import 'widgets/ui.dart';
 
-class MedGuardApp extends ConsumerStatefulWidget {
-  const MedGuardApp({super.key});
+class WellWellApp extends ConsumerStatefulWidget {
+  const WellWellApp({super.key});
 
   @override
-  ConsumerState<MedGuardApp> createState() => _MedGuardAppState();
+  ConsumerState<WellWellApp> createState() => _WellWellAppState();
 }
 
-class _MedGuardAppState extends ConsumerState<MedGuardApp> with WidgetsBindingObserver {
+class _WellWellAppState extends ConsumerState<WellWellApp> with WidgetsBindingObserver {
   late final GoRouter _router;
   late final ValueNotifier<int> _refresh;
   bool locked = false;
@@ -149,7 +151,7 @@ class _MedGuardAppState extends ConsumerState<MedGuardApp> with WidgetsBindingOb
   Future<void> _unlock() async {
     try {
       final ok = await LocalAuthentication().authenticate(
-        localizedReason: 'Unlock MedGuard to see your medications.',
+        localizedReason: 'Unlock WellWell to see your medications.',
         biometricOnly: false,
       );
       if (ok && mounted) setState(() => locked = false);
@@ -176,7 +178,7 @@ class _MedGuardAppState extends ConsumerState<MedGuardApp> with WidgetsBindingOb
         return ValueListenableBuilder<Locale?>(
           valueListenable: AppLanguage.localeNotifier,
           builder: (context, locale, _) => MaterialApp.router(
-          title: 'MedGuard',
+          title: 'WellWell',
           debugShowCheckedModeBanner: false,
           theme: lightTheme,
           darkTheme: darkTheme,
@@ -228,15 +230,24 @@ class SplashScreen extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: Palette.hero, begin: Alignment.topLeft, end: Alignment.bottomRight),
       ),
-      child: const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.shield_outlined, size: 88, color: Colors.white),
-            SizedBox(height: 16),
-            Text('MEDGUARD', style: TextStyle(color: Colors.white70, letterSpacing: 4, fontSize: 12)),
-          ],
-        ),
+      child: Stack(
+        children: [
+          const Positioned.fill(
+            child: BrandWaves(color: Colors.white, opacity: 0.12, anchor: WaveAnchor.both),
+          ),
+          const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                LogoMark(size: 96),
+                SizedBox(height: 16),
+                Text('WELLWELL', style: TextStyle(color: Colors.white70, letterSpacing: 4, fontSize: 12)),
+                SizedBox(height: 8),
+                Text('Feel well. Live well.', style: TextStyle(color: Colors.white70, fontSize: 14)),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

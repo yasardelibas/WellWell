@@ -9,7 +9,7 @@ class AppLocalizationsTr extends AppLocalizations {
   AppLocalizationsTr([String locale = 'tr']) : super(locale);
 
   @override
-  String get appTitle => 'MedGuard';
+  String get appTitle => 'WellWell';
 
   @override
   String get navHome => 'Ana Sayfa';
@@ -36,6 +36,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get commonRetry => 'Tekrar dene';
 
   @override
+  String get commonOk => 'Tamam';
+
+  @override
   String get commonSignIn => 'Giriş yap';
 
   @override
@@ -57,6 +60,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get authUseDemoAccount => 'Demo hesabı kullan';
+
+  @override
+  String get authDemoOnlyMessage =>
+      'Giriş ve kayıt şu anda kullanılamıyor. Lütfen demo hesabını kullanın.';
 
   @override
   String get authEmail => 'E-posta';
@@ -101,7 +108,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get settingsLanguageHint =>
-      'MedGuard\'ın sizin için kullanacağı dili seçin.';
+      'WellWell\'in sizin için kullanacağı dili seçin.';
 
   @override
   String get languageSystem => 'Sistem';
@@ -117,7 +124,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get errorNetwork =>
-      'MedGuard\'a ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.';
+      'WellWell\'e ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.';
 
   @override
   String get errorInvalidCredentials => 'E-posta veya şifre hatalı.';
