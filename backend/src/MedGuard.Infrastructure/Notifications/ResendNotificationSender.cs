@@ -26,41 +26,62 @@ public sealed class ResendNotificationSender : INotificationSender
         _logger = logger;
     }
 
-    public Task SendCaregiverInvitationAsync(string email, string token, CancellationToken cancellationToken) =>
+    private static bool IsTurkish(string? language) => string.Equals(language, "tr", StringComparison.OrdinalIgnoreCase);
+
+    public Task SendCaregiverInvitationAsync(string email, string token, string? language, CancellationToken cancellationToken) =>
         SendAsync(
             "caregiver-invitation",
             email,
-            "You've been invited as a MedGuard caregiver",
-            $"""
-            <p>You've been invited to help keep track of someone's medication routine in MedGuard.</p>
-            <p>Enter this invitation code in the app to accept:</p>
-            <p style="font-size:28px;font-weight:700;letter-spacing:2px;">{System.Net.WebUtility.HtmlEncode(token)}</p>
-            <p style="color:#64748B;font-size:13px;">If you did not expect this invitation, you can ignore this email.</p>
-            """,
+            IsTurkish(language) ? "MedGuard'da bakıcı olarak davet edildiniz" : "You've been invited as a MedGuard caregiver",
+            IsTurkish(language)
+                ? $"""
+                  <p>Birinin MedGuard'daki ilaç düzenini takip etmenize yardımcı olmanız için davet edildiniz.</p>
+                  <p>Kabul etmek için bu davet kodunu uygulamaya girin:</p>
+                  <p style="font-size:28px;font-weight:700;letter-spacing:2px;">{System.Net.WebUtility.HtmlEncode(token)}</p>
+                  <p style="color:#64748B;font-size:13px;">Bu daveti beklemiyorsanız, bu e-postayı yok sayabilirsiniz.</p>
+                  """
+                : $"""
+                  <p>You've been invited to help keep track of someone's medication routine in MedGuard.</p>
+                  <p>Enter this invitation code in the app to accept:</p>
+                  <p style="font-size:28px;font-weight:700;letter-spacing:2px;">{System.Net.WebUtility.HtmlEncode(token)}</p>
+                  <p style="color:#64748B;font-size:13px;">If you did not expect this invitation, you can ignore this email.</p>
+                  """,
             cancellationToken);
 
-    public Task SendPasswordResetAsync(string email, string token, CancellationToken cancellationToken) =>
+    public Task SendPasswordResetAsync(string email, string token, string? language, CancellationToken cancellationToken) =>
         SendAsync(
             "password-reset",
             email,
-            "Reset your MedGuard password",
-            $"""
-            <p>Use this code to reset your MedGuard password:</p>
-            <p style="font-size:28px;font-weight:700;letter-spacing:2px;">{System.Net.WebUtility.HtmlEncode(token)}</p>
-            <p style="color:#64748B;font-size:13px;">This code expires in 30 minutes. If you did not request a password reset, you can ignore this email.</p>
-            """,
+            IsTurkish(language) ? "MedGuard şifrenizi sıfırlayın" : "Reset your MedGuard password",
+            IsTurkish(language)
+                ? $"""
+                  <p>MedGuard şifrenizi sıfırlamak için bu kodu kullanın:</p>
+                  <p style="font-size:28px;font-weight:700;letter-spacing:2px;">{System.Net.WebUtility.HtmlEncode(token)}</p>
+                  <p style="color:#64748B;font-size:13px;">Bu kod 30 dakika içinde geçerliliğini yitirir. Şifre sıfırlama talebinde bulunmadıysanız, bu e-postayı yok sayabilirsiniz.</p>
+                  """
+                : $"""
+                  <p>Use this code to reset your MedGuard password:</p>
+                  <p style="font-size:28px;font-weight:700;letter-spacing:2px;">{System.Net.WebUtility.HtmlEncode(token)}</p>
+                  <p style="color:#64748B;font-size:13px;">This code expires in 30 minutes. If you did not request a password reset, you can ignore this email.</p>
+                  """,
             cancellationToken);
 
-    public Task SendEmailVerificationAsync(string email, string code, CancellationToken cancellationToken) =>
+    public Task SendEmailVerificationAsync(string email, string code, string? language, CancellationToken cancellationToken) =>
         SendAsync(
             "email-verification",
             email,
-            "Confirm your email for MedGuard",
-            $"""
-            <p>Your MedGuard verification code is:</p>
-            <p style="font-size:32px;font-weight:700;letter-spacing:6px;">{System.Net.WebUtility.HtmlEncode(code)}</p>
-            <p style="color:#64748B;font-size:13px;">This code expires in {_options.VerificationCodeLifetimeMinutes} minutes. If you did not create a MedGuard account, you can ignore this email.</p>
-            """,
+            IsTurkish(language) ? "MedGuard için e-postanızı onaylayın" : "Confirm your email for MedGuard",
+            IsTurkish(language)
+                ? $"""
+                  <p>MedGuard doğrulama kodunuz:</p>
+                  <p style="font-size:32px;font-weight:700;letter-spacing:6px;">{System.Net.WebUtility.HtmlEncode(code)}</p>
+                  <p style="color:#64748B;font-size:13px;">Bu kod {_options.VerificationCodeLifetimeMinutes} dakika içinde geçerliliğini yitirir. Bir MedGuard hesabı oluşturmadıysanız, bu e-postayı yok sayabilirsiniz.</p>
+                  """
+                : $"""
+                  <p>Your MedGuard verification code is:</p>
+                  <p style="font-size:32px;font-weight:700;letter-spacing:6px;">{System.Net.WebUtility.HtmlEncode(code)}</p>
+                  <p style="color:#64748B;font-size:13px;">This code expires in {_options.VerificationCodeLifetimeMinutes} minutes. If you did not create a MedGuard account, you can ignore this email.</p>
+                  """,
             cancellationToken);
 
     private async Task SendAsync(string kind, string email, string subject, string htmlBody, CancellationToken cancellationToken)

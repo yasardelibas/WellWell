@@ -147,6 +147,26 @@ public sealed class ScheduleAdherenceFlowTests : IClassFixture<MedGuardApiFactor
     }
 
     [Fact]
+    public async Task RemovingAMedication_ShouldStopShowingDosesAlreadyMaterialisedForToday()
+    {
+        var user = await _factory.RegisterAsync();
+        var medication = await CreateMedicationAsync(user);
+        await CreateSchedulesAsync(user, medication.Id, "08:00");
+
+        // Viewing today's plan materialises the dose event as a row before the medication is removed,
+        // which is the exact sequence that used to leave a "ghost" dose behind.
+        var before = await user.Client.GetAsync<TodayScheduleResponse>("/api/adherence/today");
+        Assert.Equal(1, before.TotalCount);
+
+        var response = await user.Client.DeleteAsync($"/api/medications/{medication.Id}");
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        var after = await user.Client.GetAsync<TodayScheduleResponse>("/api/adherence/today");
+        Assert.Equal(0, after.TotalCount);
+        Assert.Empty(after.Doses);
+    }
+
+    [Fact]
     public async Task CreateSchedule_ShouldRejectAMedicationOwnedByAnotherAccount()
     {
         var owner = await _factory.RegisterAsync();

@@ -1,15 +1,19 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/models.dart';
 import '../services/api.dart';
 import '../services/reminders.dart';
 import '../state/auth.dart';
+import '../l10n/language_controller.dart';
 import '../theme/palette.dart';
+import '../theme/theme_controller.dart';
 import '../utils/format.dart';
 import '../widgets/domain.dart';
 import '../widgets/ui.dart';
@@ -195,6 +199,51 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
     }
   }
 
+  Future<void> _editExpiration(Medication med) async {
+    final current = med.expirationDate == null ? null : DateTime.tryParse(med.expirationDate!);
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current ?? now,
+      firstDate: DateTime(now.year - 1),
+      lastDate: DateTime(now.year + 15),
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      busy = true;
+      actionError = null;
+    });
+    try {
+      await Api.setExpiration(med.id, picked);
+      await load();
+      await Reminders.syncFromServer(
+        privacyMode: ref.read(authProvider).user?.privacyNotificationsEnabled ?? true,
+      );
+    } catch (e) {
+      if (mounted) setState(() => actionError = describeError(e));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  Future<void> _clearExpiration(Medication med) async {
+    setState(() {
+      busy = true;
+      actionError = null;
+    });
+    try {
+      await Api.setExpiration(med.id, null);
+      await load();
+      await Reminders.syncFromServer(
+        privacyMode: ref.read(authProvider).user?.privacyNotificationsEnabled ?? true,
+      );
+    } catch (e) {
+      if (mounted) setState(() => actionError = describeError(e));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   // Best-effort: general education is a bonus and must never block the detail screen.
   Future<void> _loadEducation() async {
     try {
@@ -326,7 +375,7 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.auto_awesome, size: 20, color: Palette.brand),
+                    Icon(Icons.auto_awesome, size: 20, color: Palette.brand),
                     const SizedBox(width: 8),
                     Expanded(child: Text('About this medication', style: Theme.of(context).textTheme.titleMedium)),
                     if (education!.generatedByAi)
@@ -364,7 +413,8 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
               FieldRow(label: 'Provider', value: med.provenance?.provider ?? 'Entered manually'),
               FieldRow(label: 'Identifier', value: med.provenance?.externalIdentifier ?? med.rxCui),
               FieldRow(label: 'Dataset version', value: med.provenance?.datasetVersion),
-              FieldRow(label: 'Last verified', value: med.provenance == null ? 'Not verified' : formatDateTime(med.provenance!.retrievedAt), divider: false),
+              FieldRow(label: 'Last verified', value: med.provenance == null ? 'Not verified' : formatDateTime(med.provenance!.retrievedAt)),
+              FieldRow(label: 'Added on', value: med.createdAt == null ? null : formatDate(med.createdAt!), divider: false),
             ],
           ),
         ),
@@ -402,6 +452,7 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
                         label: 'Take',
                         loading: busy,
                         onPressed: () async {
+                          HapticFeedback.selectionClick();
                           setState(() => busy = true);
                           try {
                             await Api.markTaken(nextDose.id);
@@ -435,7 +486,7 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
               Row(
                 children: [
                   Expanded(child: Text('Refill', style: Theme.of(context).textTheme.titleMedium)),
-                  const Icon(Icons.medication_outlined, color: Palette.brand),
+                  Icon(Icons.medication_outlined, color: Palette.brand),
                 ],
               ),
               const SizedBox(height: 8),
@@ -468,7 +519,66 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
             ],
           ),
         ),
-        if (actionError != null) Text(actionError!, style: const TextStyle(color: Palette.critical)),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: Text('Expiration', style: Theme.of(context).textTheme.titleMedium)),
+                  Icon(Icons.event_outlined, color: Palette.brand),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Builder(builder: (context) {
+                final expiration = med.expirationDate == null ? null : DateTime.tryParse(med.expirationDate!);
+                if (expiration == null) {
+                  return const Text('Add the date printed on the label to get a reminder before it expires.');
+                }
+                final daysUntil = expiration.difference(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day)).inDays;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(formatDate(med.expirationDate!), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
+                    Text(
+                      daysUntil < 0
+                          ? 'This expired ${-daysUntil} ${-daysUntil == 1 ? 'day' : 'days'} ago.'
+                          : daysUntil == 0
+                              ? 'This expires today.'
+                              : 'Expires in $daysUntil ${daysUntil == 1 ? 'day' : 'days'}.',
+                    ),
+                    if (daysUntil <= 30) ...[
+                      const SizedBox(height: 8),
+                      Callout(
+                        tone: daysUntil < 0 ? Tone.critical : Tone.attention,
+                        title: daysUntil < 0 ? 'Expired' : 'Expiring soon',
+                        message: daysUntil < 0
+                            ? 'Check whether this medication is still safe to use, or replace it.'
+                            : 'Consider a replacement before it expires.',
+                      ),
+                    ],
+                  ],
+                );
+              }),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: SecondaryButton(
+                      label: med.expirationDate == null ? 'Add expiration date' : 'Update expiration date',
+                      onPressed: () => _editExpiration(med),
+                    ),
+                  ),
+                  if (med.expirationDate != null) ...[
+                    const SizedBox(width: 8),
+                    TextButton(onPressed: () => _clearExpiration(med), child: const Text('Clear')),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+        if (actionError != null) Text(actionError!, style: TextStyle(color: Palette.critical)),
         SecondaryButton(label: 'View dose history', onPressed: () => context.push('/history?medicationId=${med.id}')),
         DangerButton(
           label: 'Remove medication',
@@ -485,6 +595,7 @@ class _MedicationDetailScreenState extends ConsumerState<MedicationDetailScreen>
               ),
             );
             if (ok == true) {
+              HapticFeedback.mediumImpact();
               await Api.deleteMedication(med.id);
               if (context.mounted) {
                 ref.read(dataRevisionProvider.notifier).state++;
@@ -597,7 +708,7 @@ class _NewMedicationScreenState extends ConsumerState<NewMedicationScreen> {
             ],
           ),
         ),
-        if (error != null) Text(error!, style: const TextStyle(color: Palette.critical)),
+        if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
         PrimaryButton(label: 'Save medication', loading: busy, onPressed: save),
       ],
     );
@@ -749,10 +860,24 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
                     key: timeKeys[i],
                     time: times[i],
                     onChanged: (value) => times[i] = value,
-                    onRemove: () => setState(() {
-                      times.removeAt(i);
-                      timeKeys.removeAt(i);
-                    }),
+                    onRemove: () {
+                      final removedTime = times[i];
+                      final removedKey = timeKeys[i];
+                      setState(() {
+                        times.removeAt(i);
+                        timeKeys.removeAt(i);
+                      });
+                      showAppSnackBar(
+                        context,
+                        'Reminder time removed.',
+                        actionLabel: 'Undo',
+                        onAction: () => setState(() {
+                          final restoreAt = i <= times.length ? i : times.length;
+                          times.insert(restoreAt, removedTime);
+                          timeKeys.insert(restoreAt, removedKey);
+                        }),
+                      );
+                    },
                   ),
                 ),
               TextButton(onPressed: _addTime, child: const Text('Add a date and time')),
@@ -766,7 +891,7 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
           checked: confirmed,
           onChanged: (v) => setState(() => confirmed = v),
         ),
-        if (error != null) Text(error!, style: const TextStyle(color: Palette.critical)),
+        if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
         PrimaryButton(label: 'Save reminders', loading: busy, onPressed: save),
       ],
     );
@@ -797,18 +922,15 @@ class _ReminderTimePickerState extends State<_ReminderTimePicker> {
     _selected = DateTime(now.year, now.month, now.day, hour, minute);
   }
 
-  String _label(DateTime value) {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    final time =
-        '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
-    return '${days[value.weekday - 1]} ${value.day} ${months[value.month - 1]} ${value.year} · $time';
-  }
+  String _label(DateTime value) =>
+      '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final minimum = DateTime(now.year, now.month, now.day);
+    // Only the time of day is ever used (schedules repeat daily - see matchDateTimeComponents:
+    // DateTimeComponents.time in Reminders), so the picker only asks for a time. It used to be
+    // a date+time wheel, which forced scrolling past an irrelevant date to reach the time and
+    // made picking e.g. "next month" look like it was trying (and failing) to set a real date.
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -817,18 +939,17 @@ class _ReminderTimePickerState extends State<_ReminderTimePicker> {
             children: [
               Text(_label(_selected), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
               const SizedBox(height: 4),
-              const Text('Repeats every day at this time.', style: TextStyle(color: Palette.inkMuted, fontSize: 12)),
+              Text('Repeats every day at this time.', style: TextStyle(color: Palette.inkMuted, fontSize: 12)),
               SizedBox(
                 height: 216,
                 child: NotificationListener<ScrollNotification>(
                   onNotification: (_) => true,
                   child: CupertinoTheme(
-                    data: const CupertinoThemeData(brightness: Brightness.light),
+                    data: CupertinoThemeData(brightness: Theme.of(context).brightness),
                     child: CupertinoDatePicker(
-                      mode: CupertinoDatePickerMode.dateAndTime,
+                      mode: CupertinoDatePickerMode.time,
                       use24hFormat: true,
-                      minimumDate: minimum,
-                      initialDateTime: _selected.isBefore(minimum) ? minimum : _selected,
+                      initialDateTime: _selected,
                       onDateTimeChanged: (value) {
                         setState(() => _selected = value);
                         widget.onChanged(
@@ -867,6 +988,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   AdherenceSummary? summary;
   bool loading = true;
   String? error;
+  // Null means the default "last 2 weeks" server window. Otherwise the first day of the chosen month.
+  DateTime? selectedMonth;
 
   @override
   void initState() {
@@ -881,7 +1004,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
       error = null;
     });
     try {
-      final results = await Future.wait([Api.medications(), Api.history(medicationId: filter)]);
+      final month = selectedMonth;
+      final from = month == null ? null : DateTime(month.year, month.month, 1);
+      final to = month == null ? null : DateTime(month.year, month.month + 1, 0);
+      final results = await Future.wait([Api.medications(), Api.history(medicationId: filter, from: from, to: to)]);
       if (!mounted) return;
       setState(() {
         medications = results[0] as List<Medication>;
@@ -896,6 +1022,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
         loading = false;
       });
     }
+  }
+
+  void _shiftMonth(int delta) {
+    final base = selectedMonth ?? DateTime.now();
+    final next = DateTime(base.year, base.month + delta, 1);
+    // Don't allow paging into the future beyond the current month.
+    final now = DateTime.now();
+    if (next.isAfter(DateTime(now.year, now.month, 1))) return;
+    setState(() => selectedMonth = next);
+    load();
+  }
+
+  void _resetToDefaultWindow() {
+    setState(() => selectedMonth = null);
+    load();
   }
 
   // The weekly recap covers all medications; only show it on the unfiltered view.
@@ -922,7 +1063,34 @@ class _HistoryScreenState extends State<HistoryScreen> {
       children: [
         const Align(alignment: Alignment.centerLeft, child: BackCircle()),
         Text('History', style: Theme.of(context).textTheme.headlineMedium),
-        const Text('Completed, skipped and missed doses over the last two weeks.'),
+        Text(
+          selectedMonth == null
+              ? 'Completed, skipped and missed doses over the last two weeks.'
+              : 'Completed, skipped and missed doses in ${formatMonth(selectedMonth!)}.',
+        ),
+        Row(
+          children: [
+            IconButton(onPressed: () => _shiftMonth(-1), icon: const Icon(Icons.chevron_left)),
+            Expanded(
+              child: Center(
+                child: Text(
+                  selectedMonth == null ? 'Last 2 weeks' : formatMonth(selectedMonth!),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: () {
+                final now = DateTime.now();
+                final atLatest = selectedMonth == null ||
+                    (selectedMonth!.year == now.year && selectedMonth!.month == now.month);
+                if (!atLatest) _shiftMonth(1);
+              },
+              icon: const Icon(Icons.chevron_right),
+            ),
+            if (selectedMonth != null) TextButton(onPressed: _resetToDefaultWindow, child: const Text('Reset')),
+          ],
+        ),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -942,10 +1110,15 @@ class _HistoryScreenState extends State<HistoryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('This week', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 12),
-                WeeklyBarChart(history: data),
-                const SizedBox(height: 12),
+                if (selectedMonth == null) ...[
+                  Text('This week', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  WeeklyBarChart(history: data),
+                  const SizedBox(height: 12),
+                ] else ...[
+                  Text(formatMonth(selectedMonth!), style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                ],
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -1074,12 +1247,14 @@ class _InsightsScreenState extends State<InsightsScreen> {
         else if (error != null)
           ErrorBanner(message: error!, onRetry: load)
         else if (d != null) ...[
-          Container(
+          Builder(builder: (context) {
+            final dark = Theme.of(context).brightness == Brightness.dark;
+            return Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFFFF7ED), Color(0xFFFFEDD5)],
+              gradient: LinearGradient(
+                colors: dark ? [const Color(0xFF3A2413), const Color(0xFF2B1B0E)] : [const Color(0xFFFFF7ED), const Color(0xFFFFEDD5)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -1092,15 +1267,16 @@ class _InsightsScreenState extends State<InsightsScreen> {
                 const SizedBox(height: 8),
                 Text(
                   '${d.streakDays}',
-                  style: const TextStyle(fontSize: 44, fontWeight: FontWeight.w800, color: Color(0xFFC2410C)),
+                  style: TextStyle(fontSize: 44, fontWeight: FontWeight.w800, color: dark ? const Color(0xFFFDBA74) : const Color(0xFFC2410C)),
                 ),
                 Text(
-                  d.streakDays == 1 ? 'day on-time streak' : 'day on-time streak',
-                  style: const TextStyle(color: Color(0xFF9A3412), fontWeight: FontWeight.w600),
+                  d.streakDays == 1 ? 'day on-time streak' : 'days on-time streak',
+                  style: TextStyle(color: dark ? const Color(0xFFFDD9B5) : const Color(0xFF9A3412), fontWeight: FontWeight.w600),
                 ),
               ],
             ),
-          ),
+            );
+          }),
           AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1131,7 +1307,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.schedule, color: Palette.brand),
+                  Icon(Icons.schedule, color: Palette.brand),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -1170,7 +1346,6 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   EmergencyCard? draft;
   bool loading = true;
   bool busy = false;
-  bool saved = false;
   String? error;
 
   @override
@@ -1203,15 +1378,14 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
     setState(() {
       busy = true;
       error = null;
-      saved = false;
     });
     try {
       final updated = await Api.updateEmergencyCard(current.toUpdateBody());
       setState(() {
         card = updated;
         draft = updated;
-        saved = true;
       });
+      if (context.mounted) showAppSnackBar(context, 'Your emergency card was updated.');
     } catch (e) {
       setState(() => error = describeError(e));
     } finally {
@@ -1246,6 +1420,29 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                 QrImageView(data: card!.shareUrl, size: 220),
                 Text(card!.shareUrl, textAlign: TextAlign.center, style: Theme.of(context).textTheme.labelSmall),
                 Text('Last updated ${formatDateTime(card!.updatedAt)}', style: Theme.of(context).textTheme.labelSmall),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: card!.shareUrl));
+                          showAppSnackBar(context, 'Link copied.');
+                        },
+                        icon: const Icon(Icons.copy_outlined),
+                        label: const Text('Copy link'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => SharePlus.instance.share(ShareParams(text: card!.shareUrl)),
+                        icon: const Icon(Icons.ios_share),
+                        label: const Text('Share'),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           )
@@ -1265,8 +1462,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
           ),
         ),
         _EmergencyFields(draft: current, onChanged: (next) => setState(() => draft = next)),
-        if (error != null) Text(error!, style: const TextStyle(color: Palette.critical)),
-        if (saved) const Text('Your emergency card was updated.', style: TextStyle(color: Palette.safe)),
+        if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
         PrimaryButton(label: 'Save card', loading: busy, onPressed: save),
         SecondaryButton(
           label: 'Create a new QR code',
@@ -1283,6 +1479,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
               ),
             );
             if (ok == true) {
+              HapticFeedback.mediumImpact();
               final updated = await Api.regenerateEmergency();
               setState(() {
                 card = updated;
@@ -1464,7 +1661,10 @@ class _CaregiversScreenState extends State<CaregiversScreen> {
                   try {
                     final result = await Api.inviteCaregiver(email.text.trim(), selected);
                     email.clear();
-                    setState(() => invitationToken = result['invitationToken']?.toString());
+                    final relationshipId = (result['caregiver'] as Map?)?['id']?.toString();
+                    final token = result['invitationToken']?.toString();
+                    // Combined so the caregiver only has to paste one code; the redeem screen splits it back apart.
+                    setState(() => invitationToken = relationshipId != null && token != null ? '$relationshipId.$token' : null);
                     await load();
                   } catch (e) {
                     setState(() => error = describeError(e));
@@ -1477,8 +1677,33 @@ class _CaregiversScreenState extends State<CaregiversScreen> {
           ),
         ),
         if (invitationToken != null)
-          Callout(title: 'Invitation created', message: 'Share this one-time code with the caregiver so they can accept: $invitationToken'),
-        if (error != null) Text(error!, style: const TextStyle(color: Palette.critical)),
+          Callout(
+            title: 'Invitation created',
+            message: 'Share this one-time code with the caregiver so they can accept: $invitationToken',
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: invitationToken!));
+                      showAppSnackBar(context, 'Code copied.');
+                    },
+                    icon: const Icon(Icons.copy_outlined),
+                    label: const Text('Copy code'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => SharePlus.instance.share(ShareParams(text: invitationToken!)),
+                    icon: const Icon(Icons.ios_share),
+                    label: const Text('Share'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
         Text('People with access', style: Theme.of(context).textTheme.titleMedium),
         if (loading)
           const Center(child: CircularProgressIndicator())
@@ -1531,13 +1756,330 @@ class _CaregiversScreenState extends State<CaregiversScreen> {
                   DangerButton(
                     label: 'Remove access',
                     onPressed: () async {
-                      await Api.revokeCaregiver(person.id);
-                      await load();
+                      final ok = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Remove this caregiver?'),
+                          content: Text('${person.displayName ?? person.email} will no longer be able to see your medications or adherence.'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Keep access')),
+                            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Remove')),
+                          ],
+                        ),
+                      );
+                      if (ok == true) {
+                        HapticFeedback.mediumImpact();
+                        await Api.revokeCaregiver(person.id);
+                        await load();
+                      }
                     },
                   ),
                 ],
               ),
             ),
+      ],
+    );
+  }
+}
+
+class SharedWithMeScreen extends StatefulWidget {
+  const SharedWithMeScreen({super.key});
+
+  @override
+  State<SharedWithMeScreen> createState() => _SharedWithMeScreenState();
+}
+
+class _SharedWithMeScreenState extends State<SharedWithMeScreen> {
+  List<SharedCaregiver> people = [];
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() {
+      loading = people.isEmpty;
+      error = null;
+    });
+    try {
+      final data = await Api.sharedWithMe();
+      if (!mounted) return;
+      setState(() {
+        people = data;
+        loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        error = describeError(e);
+        loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScreenScaffold(
+      onRefresh: load,
+      children: [
+        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
+        Text('Shared with you', style: Theme.of(context).textTheme.headlineMedium),
+        const Text('People who have shared their medications and adherence with you.'),
+        SecondaryButton(
+          label: 'I have an invitation code',
+          onPressed: () async {
+            final redeemed = await context.push<bool>('/shared-with-me/redeem');
+            if (redeemed == true) load();
+          },
+        ),
+        if (loading)
+          const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
+        else if (error != null)
+          ErrorBanner(message: error!, onRetry: load)
+        else if (people.isEmpty)
+          const EmptyState(
+            icon: Icons.people_outline,
+            title: 'Nobody has shared with you yet',
+            description: 'When someone invites you as a caregiver and you accept their invitation code, they will appear here.',
+          )
+        else
+          for (final person in people)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: InkWell(
+                onTap: () => context.push('/shared-with-me/${person.id}', extra: person.ownerLabel),
+                child: AppCard(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(person.ownerLabel, style: Theme.of(context).textTheme.titleMedium),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                for (final permission in caregiverPermissions)
+                                  if (person.permissions.contains(permission.$1))
+                                    AppBadge(label: permission.$2, tone: Tone.info),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, color: Palette.inkSubtle),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+      ],
+    );
+  }
+}
+
+class RedeemInvitationScreen extends StatefulWidget {
+  const RedeemInvitationScreen({super.key});
+
+  @override
+  State<RedeemInvitationScreen> createState() => _RedeemInvitationScreenState();
+}
+
+class _RedeemInvitationScreenState extends State<RedeemInvitationScreen> {
+  final code = TextEditingController();
+  bool busy = false;
+  String? error;
+
+  @override
+  void dispose() {
+    code.dispose();
+    super.dispose();
+  }
+
+  Future<void> _redeem() async {
+    final parts = code.text.trim().split('.');
+    if (parts.length != 2 || parts.any((p) => p.isEmpty)) {
+      setState(() => error = 'Enter the full invitation code exactly as it was shared with you.');
+      return;
+    }
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    try {
+      await Api.acceptCaregiverInvitation(parts[0], parts[1]);
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (e) {
+      setState(() => error = describeError(e));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScreenScaffold(
+      children: [
+        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
+        Text('Enter invitation code', style: Theme.of(context).textTheme.headlineMedium),
+        const Text('Paste the code the person shared with you to see their medications and adherence. This only works once.'),
+        AppCard(child: LabeledField(label: 'Invitation code', controller: code, hint: 'The code they copied or shared with you')),
+        if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
+        PrimaryButton(label: 'Accept invitation', loading: busy, onPressed: _redeem),
+      ],
+    );
+  }
+}
+
+class SharedDetailScreen extends StatefulWidget {
+  const SharedDetailScreen({super.key, required this.relationshipId, this.ownerLabel});
+
+  final String relationshipId;
+  final String? ownerLabel;
+
+  @override
+  State<SharedDetailScreen> createState() => _SharedDetailScreenState();
+}
+
+class _SharedDetailScreenState extends State<SharedDetailScreen> {
+  List<Medication>? medications;
+  AdherenceHistory? adherence;
+  bool loading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+    await Future.wait([_loadMedications(), _loadAdherence()]);
+    if (mounted) setState(() => loading = false);
+  }
+
+  Future<void> _loadMedications() async {
+    try {
+      final data = await Api.sharedMedications(widget.relationshipId);
+      if (mounted) setState(() => medications = data);
+    } on ApiException catch (e) {
+      if (e.status != 403 && mounted) setState(() => error = describeError(e));
+    } catch (e) {
+      if (mounted) setState(() => error = describeError(e));
+    }
+  }
+
+  Future<void> _loadAdherence() async {
+    try {
+      final data = await Api.sharedAdherence(widget.relationshipId);
+      if (mounted) setState(() => adherence = data);
+    } on ApiException catch (e) {
+      if (e.status != 403 && mounted) setState(() => error = describeError(e));
+    } catch (e) {
+      if (mounted) setState(() => error = describeError(e));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final noAccessAtAll = !loading && medications == null && adherence == null && error == null;
+    return ScreenScaffold(
+      onRefresh: load,
+      children: [
+        const Align(alignment: Alignment.centerLeft, child: BackCircle()),
+        Text(widget.ownerLabel ?? 'Shared with you', style: Theme.of(context).textTheme.headlineMedium),
+        if (loading)
+          const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()))
+        else ...[
+          if (error != null) ErrorBanner(message: error!, onRetry: load),
+          if (noAccessAtAll)
+            const EmptyState(
+              icon: Icons.lock_outline,
+              title: 'Nothing to show yet',
+              description: 'This person has not granted you access to their medications or adherence.',
+            ),
+          if (medications != null) ...[
+            Text('Medications', style: Theme.of(context).textTheme.titleMedium),
+            if (medications!.isEmpty)
+              const EmptyState(icon: Icons.medical_services_outlined, title: 'No medications', description: 'Nothing has been added yet.')
+            else
+              for (final med in medications!)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: AppCard(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(med.displayName, style: Theme.of(context).textTheme.titleMedium),
+                              Text(med.ingredients.isEmpty ? 'No active ingredients recorded' : med.ingredients.map((i) => i.normalizedName).join(', ')),
+                            ],
+                          ),
+                        ),
+                        AppBadge(
+                          label: med.isVerified ? 'Verified' : 'Unverified',
+                          tone: verificationTone(med.verificationStatus),
+                          glyph: verificationGlyph(med.verificationStatus),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            const SizedBox(height: 16),
+          ],
+          if (adherence != null) ...[
+            Text('Adherence — last 7 days', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                AppBadge(label: '${adherence!.takenCount} taken', tone: Tone.safe, glyph: '✓'),
+                AppBadge(label: '${adherence!.skippedCount} skipped', tone: Tone.neutral, glyph: '—'),
+                AppBadge(label: '${adherence!.missedCount} missed', tone: Tone.attention, glyph: '!'),
+                AppBadge(label: '${adherence!.pendingCount} pending', tone: Tone.info, glyph: '•'),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (adherence!.days.isEmpty)
+              const EmptyState(icon: Icons.calendar_today_outlined, title: 'No doses recorded yet', description: 'Nothing has happened in this window yet.')
+            else
+              for (final day in adherence!.days)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: AppCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(isToday(day.date) ? 'Today' : formatDate(day.date), style: Theme.of(context).textTheme.labelLarge),
+                        for (final dose in day.doses)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Row(
+                              children: [
+                                Expanded(child: Text('${dose.scheduledTime} · ${dose.medicationName}')),
+                                AppBadge(label: dose.statusLabel, tone: doseTone(dose.status), glyph: doseGlyph(dose.status)),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+          ],
+        ],
       ],
     );
   }
@@ -1553,7 +2095,6 @@ class PersonalInfoScreen extends ConsumerStatefulWidget {
 class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
   late final name = TextEditingController(text: ref.read(authProvider).user?.displayName ?? '');
   bool busy = false;
-  bool saved = false;
   String? error;
 
   @override
@@ -1589,8 +2130,7 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
             ],
           ),
         ),
-        if (error != null) Text(error!, style: const TextStyle(color: Palette.critical)),
-        if (saved) const Text('Your name was updated.', style: TextStyle(color: Palette.safe)),
+        if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
         PrimaryButton(
           label: 'Save',
           loading: busy,
@@ -1598,11 +2138,10 @@ class _PersonalInfoScreenState extends ConsumerState<PersonalInfoScreen> {
             setState(() {
               busy = true;
               error = null;
-              saved = false;
             });
             try {
               await ref.read(authProvider.notifier).updateProfile({'displayName': name.text.trim()});
-              setState(() => saved = true);
+              if (context.mounted) showAppSnackBar(context, 'Your name was updated.');
             } catch (e) {
               setState(() => error = describeError(e));
             } finally {
@@ -1629,7 +2168,6 @@ class _HealthInfoScreenState extends State<HealthInfoScreen> {
   final phone = TextEditingController();
   bool loading = true;
   bool busy = false;
-  bool saved = false;
   String? error;
 
   @override
@@ -1685,8 +2223,7 @@ class _HealthInfoScreenState extends State<HealthInfoScreen> {
             ],
           ),
         ),
-        if (error != null) Text(error!, style: const TextStyle(color: Palette.critical)),
-        if (saved) const Text('Your health information was updated.', style: TextStyle(color: Palette.safe)),
+        if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
         PrimaryButton(
           label: 'Save',
           loading: busy,
@@ -1696,7 +2233,6 @@ class _HealthInfoScreenState extends State<HealthInfoScreen> {
             setState(() {
               busy = true;
               error = null;
-              saved = false;
             });
             try {
               final updated = await Api.updateEmergencyCard(
@@ -1708,10 +2244,8 @@ class _HealthInfoScreenState extends State<HealthInfoScreen> {
                     )
                     .toUpdateBody(),
               );
-              setState(() {
-                card = updated;
-                saved = true;
-              });
+              setState(() => card = updated);
+              if (context.mounted) showAppSnackBar(context, 'Your health information was updated.');
             } catch (e) {
               setState(() => error = describeError(e));
             } finally {
@@ -1779,7 +2313,59 @@ class _AppSettingsScreenState extends ConsumerState<AppSettingsScreen> {
                   },
           ),
         ),
-        if (error != null) Text(error!, style: const TextStyle(color: Palette.critical)),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Appearance', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              const Text('Follow the system setting, or always use light or dark.'),
+              const SizedBox(height: 12),
+              ValueListenableBuilder<ThemeMode>(
+                valueListenable: AppTheme.modeNotifier,
+                builder: (context, mode, _) => SegmentedButton<ThemeMode>(
+                  segments: const [
+                    ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(Icons.brightness_auto_outlined)),
+                    ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode_outlined)),
+                    ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode_outlined)),
+                  ],
+                  selected: {mode},
+                  onSelectionChanged: (selection) => AppTheme.setMode(selection.first),
+                ),
+              ),
+            ],
+          ),
+        ),
+        AppCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Language', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              const Text("Choose the language MedGuard uses for you. This also changes what's sent to you by email."),
+              const SizedBox(height: 12),
+              ValueListenableBuilder<Locale?>(
+                valueListenable: AppLanguage.localeNotifier,
+                builder: (context, locale, _) => SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'system', label: Text('System')),
+                    ButtonSegment(value: 'en', label: Text('English')),
+                    ButtonSegment(value: 'tr', label: Text('Türkçe')),
+                  ],
+                  selected: {locale?.languageCode ?? 'system'},
+                  onSelectionChanged: (selection) async {
+                    final code = selection.first == 'system' ? null : selection.first;
+                    await AppLanguage.setLanguage(code);
+                    if (code != null) {
+                      await ref.read(authProvider.notifier).updateProfile({'preferredLanguage': code});
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
       ],
     );
   }
@@ -1827,7 +2413,7 @@ class _NotificationSettingsScreenState extends ConsumerState<NotificationSetting
                   },
           ),
         ),
-        if (error != null) Text(error!, style: const TextStyle(color: Palette.critical)),
+        if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
       ],
     );
   }
@@ -1928,7 +2514,7 @@ class _FindingExplanationScreenState extends State<FindingExplanationScreen> {
               for (final med in current.medications) ...[
                 Row(
                   children: [
-                    const Icon(Icons.circle, size: 8, color: Palette.brand),
+                    Icon(Icons.circle, size: 8, color: Palette.brand),
                     const SizedBox(width: 8),
                     Expanded(child: Text(med.name, style: const TextStyle(fontWeight: FontWeight.w600))),
                     AppBadge(label: med.verified ? 'Verified' : 'Unverified', tone: med.verified ? Tone.safe : Tone.neutral, glyph: med.verified ? '✓' : '?'),

@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:dio/dio.dart';
 
+import '../l10n/language_controller.dart';
 import '../models/models.dart';
 import 'secure_store.dart';
 
@@ -23,9 +25,40 @@ class NetworkException implements Exception {
   String toString() => message;
 }
 
+// The ~50 backend error codes aren't individually translated (see the plan: it's cheaper to
+// localize by code on this side than to touch every backend throw site). Only the handful a
+// user is likely to actually see are mapped; anything else falls back to the server's English
+// message, which is always present.
+const _errorMessagesByCodeTr = {
+  'invalid_credentials': 'E-posta veya şifre hatalı.',
+  'email_in_use': 'Bu e-posta ile bir hesap zaten var.',
+  'medication_not_found': 'Bu ilaç listenizde yok.',
+  'invalid_refresh_token': 'Lütfen tekrar giriş yapın.',
+  'refresh_token_reused': 'Lütfen tekrar giriş yapın.',
+  'finding_not_found': 'Bu güvenlik bulgusu artık mevcut değil.',
+  'invitation_not_found': 'Bu davet artık geçerli değil.',
+  'invitation_expired': 'Bu davet artık geçerli değil.',
+  'invitation_mismatch': 'Bu davet farklı bir e-posta adresine gönderilmişti.',
+  'caregiver_not_found': 'Bu kişi hesabınıza bağlı bir bakıcı değil.',
+};
+
+String _currentLanguageCode() =>
+    AppLanguage.localeNotifier.value?.languageCode ?? PlatformDispatcher.instance.locale.languageCode;
+
 String describeError(Object error) {
-  if (error is ApiException || error is NetworkException) return error.toString();
-  return 'Something went wrong. Please try again.';
+  if (error is ApiException) {
+    if (_currentLanguageCode() == 'tr') {
+      final localized = _errorMessagesByCodeTr[error.code];
+      if (localized != null) return localized;
+    }
+    return error.toString();
+  }
+  if (error is NetworkException) {
+    return _currentLanguageCode() == 'tr'
+        ? "MedGuard'a ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin."
+        : error.toString();
+  }
+  return _currentLanguageCode() == 'tr' ? 'Bir şeyler ters gitti. Lütfen tekrar deneyin.' : 'Something went wrong. Please try again.';
 }
 
 class ApiClient {
@@ -195,6 +228,9 @@ final apiClient = ApiClient();
 
 Map<String, dynamic> _map(dynamic data) => Map<String, dynamic>.from(data as Map);
 
+String _dateOnly(DateTime date) =>
+    '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
 class Api {
   static Future<AuthResponse> login(String email, String password) => apiClient.post(
         '/api/auth/login',
@@ -280,6 +316,12 @@ class Api {
         body: {'remainingQuantity': remainingQuantity},
       );
 
+  static Future<Medication> setExpiration(String id, DateTime? expirationDate) => apiClient.put(
+        '/api/medications/$id/expiration',
+        (d) => Medication.fromJson(_map(d)),
+        body: {'expirationDate': expirationDate == null ? null : _dateOnly(expirationDate)},
+      );
+
   static Future<ScanResponse> scan(Map<String, dynamic> body) =>
       apiClient.post('/api/medications/scan', (d) => ScanResponse.fromJson(_map(d)), body: body);
 
@@ -321,10 +363,14 @@ class Api {
   static Future<TodaySchedule> today() =>
       apiClient.get('/api/adherence/today', (d) => TodaySchedule.fromJson(_map(d)));
 
-  static Future<AdherenceHistory> history({String? medicationId}) => apiClient.get(
+  static Future<AdherenceHistory> history({String? medicationId, DateTime? from, DateTime? to}) => apiClient.get(
         '/api/adherence/history',
         (d) => AdherenceHistory.fromJson(_map(d)),
-        query: medicationId == null ? null : {'medicationId': medicationId},
+        query: {
+          if (medicationId != null) 'medicationId': medicationId,
+          if (from != null) 'from': _dateOnly(from),
+          if (to != null) 'to': _dateOnly(to),
+        },
       );
 
   static Future<AdherenceSummary> adherenceSummary() =>
@@ -369,6 +415,27 @@ class Api {
       );
 
   static Future<void> revokeCaregiver(String id) => apiClient.delete('/api/caregivers/$id', (_) {});
+
+  static Future<Caregiver> acceptCaregiverInvitation(String id, String token) => apiClient.post(
+        '/api/caregivers/invitations/$id/accept',
+        (d) => Caregiver.fromJson(_map(d)),
+        body: {'token': token},
+      );
+
+  static Future<List<SharedCaregiver>> sharedWithMe() => apiClient.get(
+        '/api/caregivers/shared-with-me',
+        (d) => (d as List).map((e) => SharedCaregiver.fromJson(_map(e))).toList(),
+      );
+
+  static Future<List<Medication>> sharedMedications(String relationshipId) => apiClient.get(
+        '/api/caregivers/shared-with-me/$relationshipId/medications',
+        (d) => (d as List).map((e) => Medication.fromJson(_map(e))).toList(),
+      );
+
+  static Future<AdherenceHistory> sharedAdherence(String relationshipId) => apiClient.get(
+        '/api/caregivers/shared-with-me/$relationshipId/adherence',
+        (d) => AdherenceHistory.fromJson(_map(d)),
+      );
 }
 
 String prettyJson(Object? value) => const JsonEncoder.withIndent('  ').convert(value);

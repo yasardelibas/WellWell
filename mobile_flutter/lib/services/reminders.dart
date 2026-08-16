@@ -20,6 +20,10 @@ class Reminders {
   static final _plugin = FlutterLocalNotificationsPlugin();
   static bool _ready = false;
 
+  // Set by MedGuardApp once the router exists, so a tapped reminder can jump straight
+  // to that medication's page instead of just opening the app.
+  static void Function(String medicationId)? onNotificationTap;
+
   static Future<void> init() async {
     if (_ready) return;
     tzdata.initializeTimeZones();
@@ -38,8 +42,22 @@ class Reminders {
         requestSoundPermission: false,
       ),
     );
-    await _plugin.initialize(settings: settings);
+    await _plugin.initialize(settings: settings, onDidReceiveNotificationResponse: _handleTap);
     _ready = true;
+
+    // The app may have been launched (cold start) by tapping a reminder; the response
+    // above only fires for taps while the plugin is already running.
+    final launchDetails = await _plugin.getNotificationAppLaunchDetails();
+    if (launchDetails?.didNotificationLaunchApp == true) {
+      _handleTap(launchDetails!.notificationResponse);
+    }
+  }
+
+  static void _handleTap(NotificationResponse? response) {
+    final medicationId = response?.payload;
+    if (medicationId != null && medicationId.isNotEmpty) {
+      onNotificationTap?.call(medicationId);
+    }
   }
 
   static Future<bool> requestPermission() async {
@@ -99,6 +117,7 @@ class Reminders {
         title: 'Medication reminder',
         body: body.isEmpty ? 'You have a medication reminder.' : body,
         scheduledDate: _nextInstance(hour, minute),
+        payload: schedule.medicationId,
         notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             'medication-reminders',
@@ -116,6 +135,7 @@ class Reminders {
     }
 
     await _scheduleRefills(schedules: active, medications: medications, privacyMode: privacyMode);
+    await _scheduleExpiring(medications: medications, privacyMode: privacyMode);
 
     return ReminderSyncResult(scheduledCount: count, permissionGranted: true);
   }
@@ -157,11 +177,59 @@ class Reminders {
         title: 'Refill reminder',
         body: body,
         scheduledDate: scheduled,
+        payload: med.id,
         notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             'refill-reminders',
             'Refill reminders',
             channelDescription: 'Low-supply refill reminders from MedGuard',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: const DarwinNotificationDetails(presentAlert: true, presentSound: true, presentBanner: true, presentList: true),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    }
+  }
+
+  // One-off "expiring soon" reminders, a week before the label's expiration date. Best-effort
+  // and non-clinical: a missing or unparsable date never blocks dose reminders.
+  static Future<void> _scheduleExpiring({
+    required List<Medication> medications,
+    required bool privacyMode,
+  }) async {
+    const leadDays = 7;
+    final now = tz.TZDateTime.now(tz.local);
+
+    for (final med in medications) {
+      final raw = med.expirationDate;
+      if (raw == null) continue;
+      final expiration = DateTime.tryParse(raw);
+      if (expiration == null) continue;
+
+      var scheduled = tz.TZDateTime(tz.local, expiration.year, expiration.month, expiration.day, 9, 0)
+          .subtract(const Duration(days: leadDays));
+      // Already past the lead time (or already expired): nudge tomorrow morning instead of never.
+      if (!scheduled.isAfter(now)) {
+        scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, 9, 0).add(const Duration(days: 1));
+      }
+
+      final body = privacyMode
+          ? 'One of your medications is expiring soon.'
+          : '${med.displayName} expires on ${expiration.year}-${expiration.month.toString().padLeft(2, '0')}-${expiration.day.toString().padLeft(2, '0')}.';
+
+      await _plugin.zonedSchedule(
+        id: (med.id.hashCode ^ 0x3C3C3C3C) & 0x7fffffff,
+        title: 'Expiring soon',
+        body: body,
+        scheduledDate: scheduled,
+        payload: med.id,
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails(
+            'expiration-reminders',
+            'Expiration reminders',
+            channelDescription: 'Label expiration-date reminders from MedGuard',
             importance: Importance.high,
             priority: Priority.high,
           ),

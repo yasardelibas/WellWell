@@ -20,6 +20,8 @@ bool isToday(String iso) {
   return local.year == now.year && local.month == now.month && local.day == now.day;
 }
 
+String formatMonth(DateTime date) => DateFormat('MMMM y').format(date);
+
 String formatConfidence(double value) => '${(value * 100).round()}%';
 
 String checkLabel(String state) {

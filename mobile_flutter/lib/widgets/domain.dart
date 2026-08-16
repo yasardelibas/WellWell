@@ -48,7 +48,7 @@ class DoseCard extends StatelessWidget {
               children: [
                 SizedBox(
                   width: 56,
-                  child: Text(dose.scheduledTime, style: const TextStyle(fontWeight: FontWeight.w700, color: Palette.brand)),
+                  child: Text(dose.scheduledTime, style: TextStyle(fontWeight: FontWeight.w700, color: Palette.brand)),
                 ),
                 Expanded(
                   child: Column(
@@ -202,7 +202,7 @@ class FindingCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(
-                finding.severity == 'info' ? Icons.info_outline : Icons.error_outline,
+                findingIcon(finding.type),
                 color: style.foreground,
               ),
               const SizedBox(width: 8),
@@ -237,7 +237,7 @@ class FindingCard extends StatelessWidget {
                       child: Row(
                         children: [
                           Expanded(child: Text(med.name)),
-                          Text(med.strengthText ?? '—', style: const TextStyle(color: Palette.inkMuted)),
+                          Text(med.strengthText ?? '—', style: TextStyle(color: Palette.inkMuted)),
                         ],
                       ),
                     ),
@@ -472,12 +472,13 @@ class InsightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (message.isEmpty) return const SizedBox.shrink();
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEFF4FF), Color(0xFFECFDF5)],
+        gradient: LinearGradient(
+          colors: dark ? [const Color(0xFF16233F), const Color(0xFF102A22)] : [const Color(0xFFEFF4FF), const Color(0xFFECFDF5)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -494,7 +495,7 @@ class InsightCard extends StatelessWidget {
               color: Palette.surface,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.auto_awesome, size: 20, color: Palette.brand),
+            child: Icon(Icons.auto_awesome, size: 20, color: Palette.brand),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -503,7 +504,7 @@ class InsightCard extends StatelessWidget {
               children: [
                 Text(
                   message,
-                  style: const TextStyle(fontWeight: FontWeight.w500, color: Palette.ink, height: 1.35),
+                  style: TextStyle(fontWeight: FontWeight.w500, color: Palette.ink, height: 1.35),
                 ),
                 if (generatedByAi) ...[
                   const SizedBox(height: 6),

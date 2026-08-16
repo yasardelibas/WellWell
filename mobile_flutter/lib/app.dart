@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
 
+import 'l10n/generated/app_localizations.dart';
+import 'l10n/language_controller.dart';
 import 'screens/extra_screens.dart';
 import 'screens/flow_screens.dart';
 import 'screens/scan_screens.dart';
 import 'screens/tabs.dart';
+import 'services/reminders.dart';
 import 'state/auth.dart';
 import 'theme/app_theme.dart';
 import 'theme/palette.dart';
+import 'theme/theme_controller.dart';
 
 class MedGuardApp extends ConsumerStatefulWidget {
   const MedGuardApp({super.key});
@@ -82,6 +87,15 @@ class _MedGuardAppState extends ConsumerState<MedGuardApp> with WidgetsBindingOb
         GoRoute(path: '/insights', builder: (_, _) => const InsightsScreen()),
         GoRoute(path: '/emergency', builder: (_, _) => const EmergencyScreen()),
         GoRoute(path: '/caregivers', builder: (_, _) => const CaregiversScreen()),
+        GoRoute(path: '/shared-with-me', builder: (_, _) => const SharedWithMeScreen()),
+        GoRoute(path: '/shared-with-me/redeem', builder: (_, _) => const RedeemInvitationScreen()),
+        GoRoute(
+          path: '/shared-with-me/:id',
+          builder: (_, state) => SharedDetailScreen(
+            relationshipId: state.pathParameters['id']!,
+            ownerLabel: state.extra as String?,
+          ),
+        ),
         GoRoute(path: '/personal-info', builder: (_, _) => const PersonalInfoScreen()),
         GoRoute(path: '/health-info', builder: (_, _) => const HealthInfoScreen()),
         GoRoute(path: '/app-settings', builder: (_, _) => const AppSettingsScreen()),
@@ -103,11 +117,13 @@ class _MedGuardAppState extends ConsumerState<MedGuardApp> with WidgetsBindingOb
         ),
       ],
     );
+    Reminders.onNotificationTap = (medicationId) => _router.push('/medication/$medicationId');
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    Reminders.onNotificationTap = null;
     _refresh.dispose();
     super.dispose();
   }
@@ -122,6 +138,14 @@ class _MedGuardAppState extends ConsumerState<MedGuardApp> with WidgetsBindingOb
     }
   }
 
+  // When the user's preference is "System", a system-level light/dark change must also
+  // re-resolve Palette's live brightness, since Palette.x call sites read mutable state
+  // rather than watching a widget.
+  @override
+  void didChangePlatformBrightness() {
+    if (AppTheme.modeNotifier.value == ThemeMode.system) setState(() {});
+  }
+
   Future<void> _unlock() async {
     try {
       final ok = await LocalAuthentication().authenticate(
@@ -134,31 +158,61 @@ class _MedGuardAppState extends ConsumerState<MedGuardApp> with WidgetsBindingOb
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'MedGuard',
-      debugShowCheckedModeBanner: false,
-      theme: buildTheme(),
-      routerConfig: _router,
-      builder: (context, child) {
-        return Stack(
-          children: [
-            child ?? const SizedBox.shrink(),
-            if (locked)
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(colors: Palette.hero, begin: Alignment.topLeft, end: Alignment.bottomRight),
-                  ),
-                  child: Center(
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Palette.brand),
-                      onPressed: _unlock,
-                      child: const Text('Unlock'),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: AppTheme.modeNotifier,
+      builder: (context, themeMode, _) {
+        final lightTheme = buildTheme(Brightness.light);
+        final darkTheme = buildTheme(Brightness.dark);
+        // buildTheme() leaves Palette pointed at whichever brightness it built last (dark,
+        // above) - resolve and set the *live* brightness now, after both themes exist, so
+        // every other Palette.x call site during this build sees the mode actually in effect.
+        final resolved = switch (themeMode) {
+          ThemeMode.light => Brightness.light,
+          ThemeMode.dark => Brightness.dark,
+          ThemeMode.system => MediaQuery.platformBrightnessOf(context),
+        };
+        Palette.setBrightness(resolved);
+
+        return ValueListenableBuilder<Locale?>(
+          valueListenable: AppLanguage.localeNotifier,
+          builder: (context, locale, _) => MaterialApp.router(
+          title: 'MedGuard',
+          debugShowCheckedModeBanner: false,
+          theme: lightTheme,
+          darkTheme: darkTheme,
+          themeMode: themeMode,
+          locale: locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          routerConfig: _router,
+          builder: (context, child) {
+            return Stack(
+              children: [
+                child ?? const SizedBox.shrink(),
+                if (locked)
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: Palette.hero, begin: Alignment.topLeft, end: Alignment.bottomRight),
+                      ),
+                      child: Center(
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Palette.brand),
+                          onPressed: _unlock,
+                          child: const Text('Unlock'),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-          ],
+              ],
+            );
+          },
+          ),
         );
       },
     );
@@ -170,11 +224,11 @@ class SplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
+    return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: Palette.hero, begin: Alignment.topLeft, end: Alignment.bottomRight),
       ),
-      child: Center(
+      child: const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

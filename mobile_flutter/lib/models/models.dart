@@ -30,6 +30,7 @@ class User {
     required this.biometricLockEnabled,
     required this.isDemoAccount,
     required this.emailVerified,
+    this.preferredLanguage = 'en',
   });
 
   final String id;
@@ -41,6 +42,7 @@ class User {
   final bool biometricLockEnabled;
   final bool isDemoAccount;
   final bool emailVerified;
+  final String preferredLanguage;
 
   factory User.fromJson(Map<String, dynamic> json) => User(
         id: _str(json['id']),
@@ -52,6 +54,7 @@ class User {
         biometricLockEnabled: _bool(json['biometricLockEnabled']),
         isDemoAccount: _bool(json['isDemoAccount']),
         emailVerified: _bool(json['emailVerified'], true),
+        preferredLanguage: _str(json['preferredLanguage'], 'en'),
       );
 }
 
@@ -135,6 +138,8 @@ class Medication {
     this.manufacturer,
     this.notes,
     this.provenance,
+    this.createdAt,
+    this.expirationDate,
   });
 
   final String id;
@@ -155,6 +160,8 @@ class Medication {
   final int activeScheduleCount;
   final int? remainingQuantity;
   final DateTime? remainingUpdatedAt;
+  final String? createdAt;
+  final String? expirationDate;
 
   bool get isVerified => verificationStatus.toLowerCase() == 'verified';
 
@@ -182,6 +189,8 @@ class Medication {
         remainingQuantity: json['remainingQuantity'] == null ? null : _int(json['remainingQuantity']),
         remainingUpdatedAt:
             json['remainingUpdatedAt'] == null ? null : DateTime.tryParse(_str(json['remainingUpdatedAt'])),
+        createdAt: _strN(json['createdAt']),
+        expirationDate: _strN(json['expirationDate']),
       );
 }
 
@@ -227,6 +236,7 @@ class MedicationCandidate {
     required this.ingredients,
     this.dosageForm,
     this.strength,
+    this.manufacturer,
     required this.matchScore,
     required this.provenance,
   });
@@ -237,6 +247,7 @@ class MedicationCandidate {
   final List<IngredientInput> ingredients;
   final String? dosageForm;
   final String? strength;
+  final String? manufacturer;
   final double matchScore;
   final Provenance provenance;
 
@@ -249,6 +260,7 @@ class MedicationCandidate {
             .toList(),
         dosageForm: _strN(json['dosageForm']),
         strength: _strN(json['strength']),
+        manufacturer: _strN(json['manufacturer']),
         matchScore: _double(json['matchScore']),
         provenance: Provenance.fromJson(Map<String, dynamic>.from(json['provenance'] as Map? ?? {})),
       );
@@ -371,6 +383,7 @@ class SafetyMedication {
 class SafetyFinding {
   SafetyFinding({
     required this.id,
+    required this.type,
     required this.severity,
     required this.title,
     required this.message,
@@ -383,6 +396,7 @@ class SafetyFinding {
   });
 
   final String id;
+  final String type;
   final String severity;
   final String title;
   final String message;
@@ -395,6 +409,7 @@ class SafetyFinding {
 
   factory SafetyFinding.fromJson(Map<String, dynamic> json) => SafetyFinding(
         id: _str(json['id']),
+        type: _str(json['type']),
         severity: _str(json['severity']),
         title: _str(json['title']),
         message: _str(json['message']),
@@ -872,6 +887,39 @@ class Caregiver {
         id: _str(json['id']),
         email: _str(json['email']),
         displayName: _strN(json['displayName']),
+        status: _str(json['status']),
+        permissions: (json['permissions'] as List? ?? []).map((e) => e.toString()).toList(),
+        createdAt: _str(json['createdAt']),
+        acceptedAt: _strN(json['acceptedAt']),
+      );
+}
+
+/// A relationship as seen by the caregiver: carries the owner's identity, not the caregiver's own.
+class SharedCaregiver {
+  SharedCaregiver({
+    required this.id,
+    required this.ownerEmail,
+    required this.status,
+    required this.permissions,
+    required this.createdAt,
+    this.ownerDisplayName,
+    this.acceptedAt,
+  });
+
+  final String id;
+  final String ownerEmail;
+  final String? ownerDisplayName;
+  final String status;
+  final List<String> permissions;
+  final String createdAt;
+  final String? acceptedAt;
+
+  String get ownerLabel => ownerDisplayName?.isNotEmpty == true ? ownerDisplayName! : ownerEmail;
+
+  factory SharedCaregiver.fromJson(Map<String, dynamic> json) => SharedCaregiver(
+        id: _str(json['id']),
+        ownerEmail: _str(json['ownerEmail']),
+        ownerDisplayName: _strN(json['ownerDisplayName']),
         status: _str(json['status']),
         permissions: (json['permissions'] as List? ?? []).map((e) => e.toString()).toList(),
         createdAt: _str(json['createdAt']),

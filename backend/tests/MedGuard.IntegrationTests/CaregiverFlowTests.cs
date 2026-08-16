@@ -55,6 +55,37 @@ public sealed class CaregiverFlowTests : IClassFixture<MedGuardApiFactory>
     }
 
     [Fact]
+    public async Task SharedWithMe_ShouldIdentifyWhichOwnerEachRelationshipBelongsTo()
+    {
+        var firstOwner = await _factory.RegisterAsync();
+        var secondOwner = await _factory.RegisterAsync();
+        var caregiverEmail = $"caregiver-{Guid.NewGuid():N}@example.com";
+
+        var caregiver = await _factory.RegisterAsync(caregiverEmail);
+        var firstInvitation = await InviteAsync(firstOwner, caregiverEmail, "VIEW_MEDICATION_LIST");
+        var secondInvitation = await InviteAsync(secondOwner, caregiverEmail, "VIEW_MEDICATION_LIST");
+        await AcceptAsync(caregiver, firstInvitation);
+        await AcceptAsync(caregiver, secondInvitation);
+
+        // A relationship only becomes "Active" (and thus visible to the caregiver) once the owner approves.
+        await firstOwner.Client.PutJsonAsync(
+            $"/api/caregivers/{firstInvitation.Caregiver.Id}/permissions",
+            new UpdateCaregiverPermissionsRequest(new[] { "VIEW_MEDICATION_LIST" }));
+        await secondOwner.Client.PutJsonAsync(
+            $"/api/caregivers/{secondInvitation.Caregiver.Id}/permissions",
+            new UpdateCaregiverPermissionsRequest(new[] { "VIEW_MEDICATION_LIST" }));
+
+        var shared = await caregiver.Client.GetAsync<List<SharedWithMeResponse>>("/api/caregivers/shared-with-me");
+
+        Assert.Equal(2, shared.Count);
+        var ownerEmails = shared.Select(relationship => relationship.OwnerEmail).ToList();
+        Assert.Contains(firstOwner.Email, ownerEmails);
+        Assert.Contains(secondOwner.Email, ownerEmails);
+        // A stable identity per relationship is the whole point — they must not be interchangeable.
+        Assert.NotEqual(shared[0].OwnerEmail, shared[1].OwnerEmail);
+    }
+
+    [Fact]
     public async Task Revocation_ShouldCloseAccessImmediately()
     {
         var owner = await _factory.RegisterAsync();

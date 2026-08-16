@@ -23,6 +23,7 @@ public static class MedicationEndpoints
         group.MapPost("/", CreateAsync).WithValidation<CreateMedicationRequest>();
         group.MapPut("/{id:guid}", UpdateAsync).WithValidation<UpdateMedicationRequest>();
         group.MapPut("/{id:guid}/refill", SetRefillAsync);
+        group.MapPut("/{id:guid}/expiration", SetExpirationAsync);
         group.MapDelete("/{id:guid}", DeleteAsync);
 
         return app;
@@ -114,7 +115,11 @@ public static class MedicationEndpoints
             classification.UsedFor.Count > 0 ? classification.UsedFor : null,
             classification.PharmacologicClass);
 
-        var result = await education.ExplainAsync(input, cancellationToken);
+        var language = await dbContext.Users
+            .Where(user => user.Id == userId)
+            .Select(user => user.PreferredLanguage)
+            .FirstOrDefaultAsync(cancellationToken);
+        var result = await education.ExplainAsync(input, language, cancellationToken);
 
         return Results.Ok(new MedicationEducationResponse(
             result.Message,
@@ -172,6 +177,35 @@ public static class MedicationEndpoints
         }
 
         medication.SetRemainingQuantity(request.RemainingQuantity, clock.UtcNow);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var scheduleCount = await dbContext.MedicationSchedules
+            .CountAsync(schedule => schedule.MedicationId == id && schedule.IsActive, cancellationToken);
+
+        return Results.Ok(medication.ToResponse(scheduleCount));
+    }
+
+    /// <summary>Records the expiration date printed on the label.</summary>
+    private static async Task<IResult> SetExpirationAsync(
+        Guid id,
+        SetExpirationRequest request,
+        MedGuardDbContext dbContext,
+        ICurrentUser currentUser,
+        IDateTimeProvider clock,
+        CancellationToken cancellationToken)
+    {
+        var userId = currentUser.RequireUserId();
+
+        var medication = await dbContext.Medications
+            .Include(item => item.Ingredients)
+            .FirstOrDefaultAsync(item => item.Id == id && item.UserId == userId, cancellationToken);
+
+        if (medication is null)
+        {
+            return Results.NotFound(new ApiError("medication_not_found", "This medication is not in your list."));
+        }
+
+        medication.SetExpirationDate(request.ExpirationDate, clock.UtcNow);
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var scheduleCount = await dbContext.MedicationSchedules

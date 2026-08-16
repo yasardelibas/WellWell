@@ -62,7 +62,8 @@ public sealed record ConfirmScanRequest(
     string? Strength,
     string? Route,
     string? LabelDirections,
-    bool AcknowledgedUnverified = false);
+    bool AcknowledgedUnverified = false,
+    DateOnly? ExpirationDate = null);
 
 public sealed record ConfirmScanResponse(
     MedicationResponse Medication,

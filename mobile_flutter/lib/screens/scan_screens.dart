@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -138,6 +139,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       await _startCamera();
       return;
     }
+    HapticFeedback.mediumImpact();
     setState(() {
       busy = true;
       error = null;
@@ -187,7 +189,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.camera_alt_outlined, size: 36, color: Palette.brand),
+                Icon(Icons.camera_alt_outlined, size: 36, color: Palette.brand),
                 const SizedBox(height: 16),
                 Text('Camera access is needed to read labels', style: Theme.of(context).textTheme.headlineMedium),
                 const SizedBox(height: 8),
@@ -215,7 +217,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
           if (ready)
             _CoveredCameraPreview(controller: controller)
           else
-            const ColoredBox(color: Palette.ink),
+            ColoredBox(color: Palette.ink),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(28, 16, 28, 16),
@@ -268,7 +270,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 4),
                           ),
-                          child: const Icon(Icons.camera_alt, size: 28, color: Palette.ink),
+                          child: Icon(Icons.camera_alt, size: 28, color: Palette.ink),
                         ),
                       ),
                       _CircleAction(
@@ -442,7 +444,7 @@ class _ManualScanScreenState extends ConsumerState<ManualScanScreen> {
           maxLines: 8,
           decoration: const InputDecoration(hintText: 'Brand name\nActive ingredient 500 mg\nDirections'),
         ),
-        if (error != null) Text(error!, style: const TextStyle(color: Palette.critical)),
+        if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
         if (demo)
           Callout(
             title: 'Demo walkthrough',
@@ -476,6 +478,7 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
   final strength = TextEditingController();
   final route = TextEditingController();
   final directions = TextEditingController();
+  DateTime? expirationDate;
 
   ScanResponse? get scan => scanHolder.scan;
 
@@ -507,6 +510,7 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
     strength.text = next.strength;
     route.text = next.route;
     directions.text = next.directions;
+    expirationDate = DateTime.tryParse(next.expirationDate);
   }
 
   Future<void> confirm(bool acknowledged) async {
@@ -527,6 +531,9 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
         'route': route.text.trim().isEmpty ? null : route.text.trim(),
         'labelDirections': directions.text.trim().isEmpty ? null : directions.text.trim(),
         'acknowledgedUnverified': acknowledged,
+        if (expirationDate != null)
+          'expirationDate':
+              '${expirationDate!.year.toString().padLeft(4, '0')}-${expirationDate!.month.toString().padLeft(2, '0')}-${expirationDate!.day.toString().padLeft(2, '0')}',
       });
       scanHolder.outcome = outcome;
       ref.read(dataRevisionProvider.notifier).state++;
@@ -623,6 +630,31 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
               LabeledField(label: 'Route', controller: route, hint: 'Oral', usedForVerification: false),
               const SizedBox(height: 12),
               LabeledField(label: 'Label directions', controller: directions, maxLines: 3, usedForVerification: false),
+              const SizedBox(height: 12),
+              Text('Expiration date', style: Theme.of(context).textTheme.labelLarge),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: () async {
+                  final now = DateTime.now();
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: expirationDate ?? now,
+                    firstDate: DateTime(now.year - 1),
+                    lastDate: DateTime(now.year + 15),
+                  );
+                  if (picked != null) setState(() => expirationDate = picked);
+                },
+                child: InputDecorator(
+                  decoration: const InputDecoration(suffixIcon: Icon(Icons.calendar_today_outlined)),
+                  child: Text(
+                    expirationDate == null
+                        ? 'Not set'
+                        : formatDate(
+                            '${expirationDate!.year.toString().padLeft(4, '0')}-${expirationDate!.month.toString().padLeft(2, '0')}-${expirationDate!.day.toString().padLeft(2, '0')}',
+                          ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -679,11 +711,14 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
                             Row(
                               children: [
                                 Expanded(child: Text(candidate.brandName, style: const TextStyle(fontWeight: FontWeight.w600))),
-                                if (candidate.rxCui == selectedRxCui) const Icon(Icons.check_circle, color: Palette.brand),
+                                if (candidate.rxCui == selectedRxCui) Icon(Icons.check_circle, color: Palette.brand),
                               ],
                             ),
                             Text(
-                              [candidate.genericName, candidate.strength, candidate.dosageForm].whereType<String>().where((v) => v.isNotEmpty).join(' · '),
+                              [candidate.genericName, candidate.strength, candidate.dosageForm, candidate.manufacturer]
+                                  .whereType<String>()
+                                  .where((v) => v.isNotEmpty)
+                                  .join(' · '),
                             ),
                             Text('Match ${formatConfidence(candidate.matchScore)} · ${candidate.provenance.provider}', style: Theme.of(context).textTheme.labelSmall),
                           ],
@@ -706,7 +741,7 @@ class _ScanReviewScreenState extends ConsumerState<ScanReviewScreen> {
             ),
           )
         else if (error != null)
-          Text(error!, style: const TextStyle(color: Palette.critical)),
+          Text(error!, style: TextStyle(color: Palette.critical)),
         PrimaryButton(
           label: needsAck ? 'Save as unverified' : 'Confirm Medication',
           loading: busy,
@@ -727,6 +762,7 @@ class ScanDraft {
     required this.route,
     required this.directions,
     required this.ingredients,
+    required this.expirationDate,
   });
 
   String brandName;
@@ -736,6 +772,7 @@ class ScanDraft {
   String route;
   String directions;
   List<IngredientDraft> ingredients;
+  String expirationDate;
 
   factory ScanDraft.from(ScanResponse? scan, MedicationCandidate? candidate) {
     final extracted = scan?.extractedIngredients
@@ -755,6 +792,7 @@ class ScanDraft {
       route: scan?.field('route') ?? '',
       directions: scan?.field('directions') ?? '',
       ingredients: ingredients.isEmpty ? [IngredientDraft()] : ingredients,
+      expirationDate: scan?.field('expirationDate') ?? '',
     );
   }
 }

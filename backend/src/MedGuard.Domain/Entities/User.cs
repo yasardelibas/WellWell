@@ -9,6 +9,7 @@ public sealed class User
         PasswordHash = string.Empty;
         DisplayName = string.Empty;
         TimeZoneId = "UTC";
+        PreferredLanguage = "en";
     }
 
     public Guid Id { get; private set; }
@@ -22,6 +23,10 @@ public sealed class User
     public string DisplayName { get; private set; }
 
     public string TimeZoneId { get; private set; }
+
+    /// <summary>ISO 639-1 code ("en", "tr") driving language for generated content: safety text,
+    /// deterministic templates, and outbound email. Defaults to English.</summary>
+    public string PreferredLanguage { get; private set; }
 
     public bool IsDemoAccount { get; private set; }
 
@@ -51,7 +56,8 @@ public sealed class User
         string displayName,
         DateTimeOffset now,
         string timeZoneId = "UTC",
-        bool isDemoAccount = false)
+        bool isDemoAccount = false,
+        string preferredLanguage = "en")
     {
         if (string.IsNullOrWhiteSpace(email))
         {
@@ -71,6 +77,7 @@ public sealed class User
             PasswordHash = passwordHash,
             DisplayName = string.IsNullOrWhiteSpace(displayName) ? email.Split('@')[0] : displayName.Trim(),
             TimeZoneId = string.IsNullOrWhiteSpace(timeZoneId) ? "UTC" : timeZoneId,
+            PreferredLanguage = string.IsNullOrWhiteSpace(preferredLanguage) ? "en" : preferredLanguage,
             IsDemoAccount = isDemoAccount,
             // The demo account is a fixed, seeded identity with no real inbox behind it.
             EmailVerified = isDemoAccount,
@@ -107,7 +114,8 @@ public sealed class User
         string? timeZoneId,
         bool? privacyNotificationsEnabled,
         bool? biometricLockEnabled,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        string? preferredLanguage = null)
     {
         if (!string.IsNullOrWhiteSpace(displayName))
         {
@@ -117,6 +125,11 @@ public sealed class User
         if (!string.IsNullOrWhiteSpace(timeZoneId))
         {
             TimeZoneId = timeZoneId;
+        }
+
+        if (!string.IsNullOrWhiteSpace(preferredLanguage))
+        {
+            PreferredLanguage = preferredLanguage;
         }
 
         if (privacyNotificationsEnabled.HasValue)

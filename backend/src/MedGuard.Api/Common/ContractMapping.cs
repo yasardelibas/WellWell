@@ -29,7 +29,8 @@ public static class ContractMapping
         user.PrivacyNotificationsEnabled,
         user.BiometricLockEnabled,
         user.IsDemoAccount,
-        user.EmailVerified);
+        user.EmailVerified,
+        user.PreferredLanguage);
 
     public static MedicationResponse ToResponse(this Medication medication, int activeScheduleCount = 0) => new(
         medication.Id,
@@ -56,6 +57,7 @@ public static class ContractMapping
         activeScheduleCount,
         medication.RemainingQuantity,
         medication.RemainingUpdatedAt,
+        medication.ExpirationDate,
         medication.CreatedAt,
         medication.UpdatedAt);
 
@@ -84,25 +86,25 @@ public static class ContractMapping
         _ => "Not independently verified"
     };
 
-    public static SafetyAnalysisResponse ToResponse(this SafetyAnalysisResult result)
+    public static SafetyAnalysisResponse ToResponse(this SafetyAnalysisResult result, string? language = null)
     {
-        var (headline, subtext) = SafetyMessages.ForStatus(result.Status);
+        var (headline, subtext) = SafetyMessages.ForStatus(result.Status, language);
 
         return new SafetyAnalysisResponse(
             ToWireValue(result.Status),
             headline,
             subtext,
-            result.Findings.Select(ToResponse).ToList(),
+            result.Findings.Select(finding => finding.ToResponse(language)).ToList(),
             result.Checks.Select(ToResponse).ToList(),
             result.AnalyzedAt);
     }
 
-    public static SafetyFindingResponse ToResponse(this SafetyFinding finding) => new(
+    public static SafetyFindingResponse ToResponse(this SafetyFinding finding, string? language = null) => new(
         finding.Id,
         ToWireValue(finding.Type),
         ToWireValue(finding.Severity),
-        finding.Title,
-        SafetyMessages.BodyFor(finding.Type),
+        SafetyMessages.TitleFor(finding.Type, language),
+        SafetyMessages.BodyFor(finding.Type, language),
         finding.IngredientNormalizedName is null && finding.IngredientRxCui is null
             ? null
             : new SafetyIngredientResponse(

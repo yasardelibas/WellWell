@@ -94,7 +94,13 @@ public sealed class DoseEventService
             await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 
+        // A dose event materialised before its medication was removed (schedule deactivated)
+        // must stop appearing in "today" once removed, even though the row itself is kept
+        // for dose history.
+        var activeScheduleIds = schedules.Select(schedule => schedule.Id).ToHashSet();
+
         return existing
+            .Where(dose => activeScheduleIds.Contains(dose.ScheduleId))
             .OrderBy(dose => dose.ScheduledAt)
             .ToList();
     }
