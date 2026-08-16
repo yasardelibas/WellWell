@@ -205,6 +205,7 @@ class AuthScreen extends ConsumerStatefulWidget {
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool signIn = true;
   bool demoLoading = false;
+  bool submitLoading = false;
   String? error;
   final email = TextEditingController();
   final password = TextEditingController();
@@ -220,19 +221,29 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   Future<void> submit() async {
     final l10n = AppLocalizations.of(context)!;
-    await showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.authUseDemoAccount),
-        content: Text(l10n.authDemoOnlyMessage),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(l10n.commonOk),
-          ),
-        ],
-      ),
-    );
+    if (email.text.trim().isEmpty || password.text.trim().isEmpty || (!signIn && name.text.trim().isEmpty)) {
+      setState(() => error = l10n.authFieldsRequired);
+      return;
+    }
+    setState(() {
+      submitLoading = true;
+      error = null;
+    });
+    try {
+      if (signIn) {
+        await ref.read(authProvider.notifier).signIn(email.text, password.text);
+      } else {
+        await ref.read(authProvider.notifier).signUp(
+              email: email.text,
+              password: password.text,
+              displayName: name.text,
+            );
+      }
+    } catch (e) {
+      setState(() => error = describeError(e));
+    } finally {
+      if (mounted) setState(() => submitLoading = false);
+    }
   }
 
   Future<void> demo() async {
@@ -277,7 +288,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
-            SegmentedAuth(signIn: signIn, onChanged: (v) => setState(() => signIn = v)),
+            SegmentedAuth(signIn: signIn, onChanged: (v) => setState(() { signIn = v; error = null; })),
             const SizedBox(height: 20),
             if (expired) Text(AppLocalizations.of(context)!.authSessionExpired, style: TextStyle(color: Palette.attention)),
             if (!signIn) ...[
@@ -316,6 +327,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             ],
             PrimaryButton(
               label: signIn ? AppLocalizations.of(context)!.commonSignIn : AppLocalizations.of(context)!.commonSignUp,
+              loading: submitLoading,
               onPressed: submit,
             ),
             const SizedBox(height: 12),
@@ -338,9 +350,42 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final email = TextEditingController();
+  final resetToken = TextEditingController();
+  final newPassword = TextEditingController();
   bool sent = false;
+  bool reset = false;
   bool loading = false;
+  bool resetLoading = false;
   String? error;
+  String? resetError;
+
+  @override
+  void dispose() {
+    email.dispose();
+    resetToken.dispose();
+    newPassword.dispose();
+    super.dispose();
+  }
+
+  Future<void> _completeReset(AppLocalizations l10n) async {
+    if (resetToken.text.trim().isEmpty || newPassword.text.trim().isEmpty) {
+      setState(() => resetError = l10n.authFieldsRequired);
+      return;
+    }
+    setState(() {
+      resetLoading = true;
+      resetError = null;
+    });
+    try {
+      await Api.resetPassword(resetToken.text.trim(), newPassword.text.trim());
+      if (!mounted) return;
+      setState(() => reset = true);
+    } catch (e) {
+      setState(() => resetError = describeError(e));
+    } finally {
+      if (mounted) setState(() => resetLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -358,9 +403,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(height: 8),
               Text(l10n.forgotPasswordSubtitle),
               const SizedBox(height: 20),
-              if (sent)
-                Callout(tone: Tone.safe, title: l10n.forgotPasswordCheckEmailTitle, message: l10n.forgotPasswordCheckEmailMessage)
-              else ...[
+              if (reset) ...[
+                Callout(tone: Tone.safe, title: l10n.forgotPasswordResetDoneTitle, message: l10n.forgotPasswordResetDoneMessage),
+                const SizedBox(height: 16),
+                PrimaryButton(label: l10n.forgotPasswordBackToSignIn, onPressed: () => context.go('/auth')),
+              ] else if (sent) ...[
+                Callout(tone: Tone.safe, title: l10n.forgotPasswordCheckEmailTitle, message: l10n.forgotPasswordCheckEmailMessage),
+                const SizedBox(height: 20),
+                LabeledField(label: l10n.forgotPasswordCodeLabel, controller: resetToken, hint: l10n.forgotPasswordCodeHint, maxLines: 2),
+                const SizedBox(height: 12),
+                LabeledField(label: l10n.forgotPasswordNewPasswordLabel, controller: newPassword, obscure: true),
+                if (resetError != null) Text(resetError!, style: TextStyle(color: Palette.critical)),
+                const SizedBox(height: 16),
+                PrimaryButton(
+                  label: l10n.forgotPasswordResetButton,
+                  loading: resetLoading,
+                  onPressed: () => _completeReset(l10n),
+                ),
+              ] else ...[
                 LabeledField(label: l10n.authEmail, controller: email, keyboardType: TextInputType.emailAddress),
                 if (error != null) Text(error!, style: TextStyle(color: Palette.critical)),
                 const SizedBox(height: 16),

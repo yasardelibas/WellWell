@@ -81,6 +81,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authSessionExpired => 'Your session ended. Please sign in again.';
 
   @override
+  String get authFieldsRequired => 'Please fill in all fields.';
+
+  @override
   String get profileTitle => 'Profile';
 
   @override
@@ -480,6 +483,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get forgotPasswordSendButton => 'Send reset link';
+
+  @override
+  String get forgotPasswordCodeLabel => 'Reset code';
+
+  @override
+  String get forgotPasswordCodeHint => 'Paste the code from the email';
+
+  @override
+  String get forgotPasswordNewPasswordLabel => 'New password';
+
+  @override
+  String get forgotPasswordResetButton => 'Reset password';
+
+  @override
+  String get forgotPasswordResetDoneTitle => 'Password updated';
+
+  @override
+  String get forgotPasswordResetDoneMessage =>
+      'Your password was changed. Please sign in again with your new password.';
+
+  @override
+  String get forgotPasswordBackToSignIn => 'Back to sign in';
 
   @override
   String get verifyEmailTitle => 'Verify your email';
@@ -1093,9 +1118,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get caregiversInvitationCreatedTitle => 'Invitation created';
 
   @override
-  String caregiversInvitationCreatedMessage(Object code) {
-    return 'Share this one-time code with the caregiver so they can accept: $code';
-  }
+  String get caregiversInvitationCreatedMessage =>
+      'Share this one-time code with the caregiver so they can accept the invitation.';
 
   @override
   String get caregiversPeopleWithAccess => 'People with access';

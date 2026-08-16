@@ -236,6 +236,12 @@ abstract class AppLocalizations {
   /// **'Your session ended. Please sign in again.'**
   String get authSessionExpired;
 
+  /// No description provided for @authFieldsRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please fill in all fields.'**
+  String get authFieldsRequired;
+
   /// No description provided for @profileTitle.
   ///
   /// In en, this message translates to:
@@ -979,6 +985,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Send reset link'**
   String get forgotPasswordSendButton;
+
+  /// No description provided for @forgotPasswordCodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset code'**
+  String get forgotPasswordCodeLabel;
+
+  /// No description provided for @forgotPasswordCodeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste the code from the email'**
+  String get forgotPasswordCodeHint;
+
+  /// No description provided for @forgotPasswordNewPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get forgotPasswordNewPasswordLabel;
+
+  /// No description provided for @forgotPasswordResetButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset password'**
+  String get forgotPasswordResetButton;
+
+  /// No description provided for @forgotPasswordResetDoneTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Password updated'**
+  String get forgotPasswordResetDoneTitle;
+
+  /// No description provided for @forgotPasswordResetDoneMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your password was changed. Please sign in again with your new password.'**
+  String get forgotPasswordResetDoneMessage;
+
+  /// No description provided for @forgotPasswordBackToSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to sign in'**
+  String get forgotPasswordBackToSignIn;
 
   /// No description provided for @verifyEmailTitle.
   ///
@@ -1979,8 +2027,8 @@ abstract class AppLocalizations {
   /// No description provided for @caregiversInvitationCreatedMessage.
   ///
   /// In en, this message translates to:
-  /// **'Share this one-time code with the caregiver so they can accept: {code}'**
-  String caregiversInvitationCreatedMessage(Object code);
+  /// **'Share this one-time code with the caregiver so they can accept the invitation.'**
+  String get caregiversInvitationCreatedMessage;
 
   /// No description provided for @caregiversPeopleWithAccess.
   ///

@@ -1679,26 +1679,45 @@ class _CaregiversScreenState extends State<CaregiversScreen> {
         if (invitationToken != null)
           Callout(
             title: l10n.caregiversInvitationCreatedTitle,
-            message: l10n.caregiversInvitationCreatedMessage(invitationToken!),
-            child: Row(
+            message: l10n.caregiversInvitationCreatedMessage,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: invitationToken!));
-                      showAppSnackBar(context, l10n.commonCodeCopied);
-                    },
-                    icon: const Icon(Icons.copy_outlined),
-                    label: Text(l10n.commonCopyCode),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Palette.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Palette.line),
+                  ),
+                  child: SelectableText(
+                    invitationToken!,
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 13, height: 1.4),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => SharePlus.instance.share(ShareParams(text: invitationToken!)),
-                    icon: const Icon(Icons.ios_share),
-                    label: Text(l10n.commonShare),
-                  ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: invitationToken!));
+                          showAppSnackBar(context, l10n.commonCodeCopied);
+                        },
+                        icon: const Icon(Icons.copy_outlined),
+                        label: Text(l10n.commonCopyCode),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => SharePlus.instance.share(ShareParams(text: invitationToken!)),
+                        icon: const Icon(Icons.ios_share),
+                        label: Text(l10n.commonShare),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
