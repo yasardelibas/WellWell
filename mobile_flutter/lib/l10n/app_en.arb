@@ -411,6 +411,7 @@
   "scanReviewNothingMessage": "Scan a medication label to see the extracted details.",
   "scanOpenScanner": "Open the scanner",
   "scanExtractionFailedTitle": "We couldn't read the label clearly",
+  "scanExtractionFailedMessage": "Try again in better light, or enter the details manually.",
   "scanEnterDetailsManually": "Enter the details manually",
   "scanReviewLowConfidenceTitle": "Please review the details",
   "scanReviewLowConfidenceMessage": "The label was read with {confidence} confidence. Check every field against the label before confirming.",
