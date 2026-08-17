@@ -200,7 +200,12 @@ public static class DependencyInjection
 
         services.AddTransient<IMedicationExplanationService>(provider => provider.GetRequiredService<OpenAiExplanationService>());
         services.AddTransient<IAdherenceInsightService>(provider => provider.GetRequiredService<OpenAiAdherenceInsightService>());
-        services.AddTransient<IMedicationEducationService>(provider => provider.GetRequiredService<OpenAiMedicationEducationService>());
+        // Education is stable per drug, so cache successful model output and serve known
+        // medications from the shared cache instead of calling the model on every view.
+        services.AddTransient<IMedicationEducationService>(provider => new CachingMedicationEducationService(
+            provider.GetRequiredService<OpenAiMedicationEducationService>(),
+            provider.GetRequiredService<ICacheStore>(),
+            provider.GetRequiredService<ILogger<CachingMedicationEducationService>>()));
     }
 
     private static void ConfigureAiClient(IServiceProvider provider, HttpClient client)
