@@ -245,7 +245,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       } else {
         await Api.markSkipped(id);
       }
-      await load();
+      // Recording a dose changes today's completed/total counts, which the nudge message is
+      // derived from - unlike a plain pull-to-refresh, this must always fetch a fresh one.
+      await load(forceNudgeRefresh: true);
     } catch (e) {
       setState(() => actionError = describeError(e));
     } finally {

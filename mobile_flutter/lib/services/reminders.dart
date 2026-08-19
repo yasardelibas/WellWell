@@ -88,7 +88,10 @@ class Reminders {
       } catch (_) {
         // Ignore; dose reminders still schedule without refill data.
       }
-      return sync(schedules, medications: medications, privacyMode: privacyMode);
+      // Must be awaited: without it, a failure inside sync() rejects the returned future
+      // instead of the one this try/catch is watching, and escapes uncaught since every
+      // caller invokes this via unawaited().
+      return await sync(schedules, medications: medications, privacyMode: privacyMode);
     } catch (error) {
       debugPrint('WellWell reminder sync failed: $error');
       return const ReminderSyncResult(scheduledCount: 0, permissionGranted: true);
